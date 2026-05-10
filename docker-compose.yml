@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: lintsec-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: lintsec
+      MYSQL_USER: lintsec
+      MYSQL_PASSWORD: lintsec
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - lintsec_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: lintsec-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - lintsec_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  maildev:
+    image: maildev/maildev:2.1.0
+    container_name: lintsec-maildev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+
+volumes:
+  lintsec_mysql_data:
+  lintsec_redis_data:
