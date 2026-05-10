@@ -1,0 +1,22 @@
+# Backend
+backend/.env
+backend/target/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# General
+.DS_Store
+*.log
+
+# Claude
+.claude/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
