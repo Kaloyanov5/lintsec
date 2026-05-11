@@ -30,6 +30,7 @@ lintsec:
   scan:
     max-duration-minutes: ${LINTSEC_SCAN_MAX_DURATION_MINUTES:5}
   ai:
-    anthropic-api-key: ${ANTHROPIC_API_KEY:}
-    model: ${LINTSEC_AI_MODEL:claude-haiku-4-5-20251001}
+    provider: gemini
+    gemini-api-key: ${GEMINI_API_KEY:}
+    model: ${LINTSEC_AI_MODEL:gemini-2.5-flash-lite}
     cache-ttl-hours: ${LINTSEC_AI_CACHE_TTL_HOURS:24}
