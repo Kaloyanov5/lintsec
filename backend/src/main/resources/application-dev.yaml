@@ -17,8 +17,9 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:}
   session:
     store-type: redis
-    redis:
-      namespace: lintsec:session
+    data:
+      redis:
+        namespace: lintsec:session
   mail:
     host: ${SPRING_MAIL_HOST:localhost}
     port: ${SPRING_MAIL_PORT:1025}
