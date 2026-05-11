@@ -29,9 +29,10 @@
 	<properties>
 		<java.version>21</java.version>
 		<jsoup.version>1.18.3</jsoup.version>
-		<anthropic.version>2.10.0</anthropic.version>
+		<google-genai.version>1.10.0</google-genai.version>
 		<openpdf.version>2.0.3</openpdf.version>
 		<springdoc.version>3.0.0-M1</springdoc.version>
+		<spring-dotenv.version>4.0.0</spring-dotenv.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -80,9 +81,14 @@
 			<version>${jsoup.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>com.anthropic</groupId>
-			<artifactId>anthropic-java</artifactId>
-			<version>${anthropic.version}</version>
+			<groupId>com.google.genai</groupId>
+			<artifactId>google-genai</artifactId>
+			<version>${google-genai.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>${spring-dotenv.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.librepdf</groupId>
