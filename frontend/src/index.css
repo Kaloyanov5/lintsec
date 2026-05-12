@@ -10,4 +10,7 @@
   .dark {
     --color-background: #1A2633;
   }
+  body {
+    background-color: var(--color-background);
+  }
 }
