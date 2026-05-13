@@ -144,7 +144,7 @@ Invalidates the session. **Response 200**, empty body.
 
 Frontend triggers: `window.location.assign('/oauth2/authorization/google')`.
 
-Spring handles the dance. On success, backend redirects to `http://localhost:5173/` (configurable) with the session cookie set. Frontend then calls `GET /api/me`.
+Spring handles the dance. On success, backend redirects to `http://localhost:5173/auth/callback` (configurable via `lintsec.frontend.base-url`) with the session cookie set. The callback page is expected to close itself (popup flow) and notify the opener, which then calls `GET /api/me`.
 
 On first Google login the user is auto-created with `provider=GOOGLE`, `emailVerified=true`, no 2FA.
 
@@ -476,4 +476,5 @@ Any change to a shape after a phase ships requires a contract bump (note in §12
 
 ## 12. Changelog
 
+- **2026-05-13** — §3.8 OAuth2 success redirect target changed from `/` to `/auth/callback` (popup flow).
 - **2026-05-12** — Initial draft (post-Phase 1).
