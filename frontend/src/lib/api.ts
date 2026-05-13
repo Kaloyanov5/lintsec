@@ -22,10 +22,22 @@ export const api: AxiosInstance = axios.create({
   headers: { Accept: 'application/json' },
 })
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+async function mintCsrfToken(): Promise<string | undefined> {
+  try {
+    await axios.get(`${baseURL}/me`, { withCredentials: true })
+  } catch {
+    // Even a 401 sets the XSRF-TOKEN cookie; only network errors leave us empty-handed.
+  }
+  return readCookie('XSRF-TOKEN')
+}
+
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const method = (config.method ?? 'get').toLowerCase()
   if (STATE_CHANGING.has(method)) {
-    const token = readCookie('XSRF-TOKEN')
+    let token = readCookie('XSRF-TOKEN')
+    if (!token) {
+      token = await mintCsrfToken()
+    }
     if (token) {
       config.headers.set('X-XSRF-TOKEN', token)
     }
