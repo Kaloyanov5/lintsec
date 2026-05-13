@@ -24,6 +24,10 @@ springdoc:
     tags-sorter: alpha
 
 lintsec:
+  frontend:
+    base-url: ${LINTSEC_FRONTEND_BASE_URL:http://localhost:5173}
+  mail:
+    from: ${LINTSEC_MAIL_FROM:no-reply@lintsec.local}
   crawler:
     max-depth: ${LINTSEC_CRAWLER_MAX_DEPTH:3}
     max-pages: ${LINTSEC_CRAWLER_MAX_PAGES:50}
