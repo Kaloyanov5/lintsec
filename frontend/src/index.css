@@ -3,14 +3,48 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
   --color-background: #F9FCFE;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-foreground: #0F172A;
+  --color-muted: #64748B;
+  --color-primary: #1DA1C0;
+  --color-primary-hover: #178AA6;
+  --color-primary-foreground: #FFFFFF;
+  --color-danger: #DC2626;
+  --color-danger-soft: #FEE2E2;
+  --color-success: #059669;
 }
 
 @layer base {
   .dark {
     --color-background: #1A2633;
+    --color-surface: #243042;
+    --color-surface-muted: #2C3A4F;
+    --color-border: #334155;
+    --color-border-strong: #475569;
+    --color-foreground: #F1F5F9;
+    --color-muted: #94A3B8;
+    --color-primary: #1DA1C0;
+    --color-primary-hover: #2EBED9;
+    --color-primary-foreground: #FFFFFF;
+    --color-danger: #F87171;
+    --color-danger-soft: rgba(248, 113, 113, 0.12);
+    --color-success: #34D399;
   }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     background-color: var(--color-background);
+    color: var(--color-foreground);
   }
 }
