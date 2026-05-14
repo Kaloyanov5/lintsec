@@ -10,21 +10,22 @@ type LogoProps = {
 }
 
 export function Logo({ className, variant = 'wordmark', alt = 'LintSec' }: LogoProps) {
+  const sizing = className ?? 'h-14'
   if (variant === 'mark') {
-    return <img src={logoMark} alt={alt} className={cn('h-14 w-auto', className)} />
+    return <img src={logoMark} alt={alt} className={cn('w-auto', sizing)} />
   }
   return (
     <>
       <img
         src={logoLight}
         alt={alt}
-        className={cn('block h-14 w-auto dark:hidden', className)}
+        className={cn('block w-auto dark:hidden', sizing)}
       />
       <img
         src={logoDark}
         alt=""
         aria-hidden="true"
-        className={cn('hidden h-14 w-auto dark:block', className)}
+        className={cn('hidden w-auto dark:block', sizing)}
       />
     </>
   )
