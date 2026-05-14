@@ -46,7 +46,9 @@ export function SiteHeader() {
 
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              {authenticated ? (
+              {status === 'loading' ? (
+                <div className="h-9 w-24 animate-pulse rounded-lg bg-[color:var(--color-surface-muted)]" />
+              ) : authenticated ? (
                 <Link to="/dashboard">
                   <Button size="sm">Dashboard</Button>
                 </Link>
@@ -95,7 +97,7 @@ export function SiteHeader() {
               </a>
             ))}
           </nav>
-          {!authenticated ? (
+          {status === 'unauthenticated' ? (
             <div className="mt-2 flex flex-col gap-2 border-t border-[color:var(--color-border)] pt-2">
               <Link to="/login" onClick={() => setMenuOpen(false)}>
                 <Button size="sm" variant="secondary" className="w-full">
