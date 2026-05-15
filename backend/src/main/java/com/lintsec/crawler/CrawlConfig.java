@@ -4,6 +4,7 @@ public record CrawlConfig(
         int maxDepth,
         int maxPages,
         int timeoutMs,
+        int delayMs,
         String userAgent
 ) {
     public CrawlConfig {
@@ -16,6 +17,9 @@ public record CrawlConfig(
         if (timeoutMs <= 0) {
             throw new IllegalArgumentException("Invalid crawler timeout");
         }
+        if (delayMs < 0 || delayMs > 5000) {
+            throw new IllegalArgumentException("Invalid crawler delay");
+        }
         if (userAgent == null || userAgent.isBlank()) {
             throw new IllegalArgumentException("Invalid crawl user agent");
         }
@@ -26,6 +30,7 @@ public record CrawlConfig(
                 2,
                 50,
                 10000,
+                500,
                 "LintSec-Scanner/1.0"
         );
     }
