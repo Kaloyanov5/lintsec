@@ -4,6 +4,7 @@ import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.*;
 
 public class Crawler {
@@ -19,6 +20,8 @@ public class Crawler {
 
     public CrawlResult crawl(String startUrl) {
         UrlScope scope = new UrlScope(startUrl);
+        RobotsTxt robots = RobotsTxt.fetch(startUrl, config.userAgent(), config.timeoutMs());
+        int effectiveDelayMs = Math.max(config.delayMs(), robots.crawlDelayMs().orElse(0));
         ArrayDeque<QueueEntry> queue = new ArrayDeque<>();
         queue.add(new QueueEntry(startUrl, 0));
 
@@ -34,6 +37,11 @@ public class Crawler {
 
             if (seen.contains(url)) continue;
             seen.add(url);
+            String path = URI.create(url).getPath();
+            if (path == null || path.isEmpty()) path = "/";
+            if (!robots.isAllowed(path)) {
+                continue;
+            }
 
             Optional<Document> optionalDocument = fetcher.fetch(url);
             if (optionalDocument.isEmpty()) {
@@ -48,6 +56,15 @@ public class Crawler {
                     if (scope.isInScope(link) && !seen.contains(link)) {
                         queue.add(new QueueEntry(link, depth + 1));
                     }
+                }
+            }
+
+            if (effectiveDelayMs > 0) {
+                try {
+                    Thread.sleep(effectiveDelayMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
             }
         }
