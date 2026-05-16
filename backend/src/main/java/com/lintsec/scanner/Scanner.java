@@ -15,19 +15,19 @@ public class Scanner {
         this.modules = List.copyOf(modules);
     }
 
-    public List<Finding> scan(CrawlResult crawlResult, ScanContext context) {
+    public List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context) {
         log.info("starting scan: modules={} urls={} forms={}",
                 this.modules.size(),
                 crawlResult.visitedUrls().size(),
                 crawlResult.forms().size()
         );
 
-        List<Finding> findings = new ArrayList<>();
+        List<ScanFinding> findings = new ArrayList<>();
         int errorCount = 0;
 
         for (ScannerModule module : this.modules) {
             try {
-                List<Finding> moduleFindings = module.scan(crawlResult, context);
+                List<ScanFinding> moduleFindings = module.scan(crawlResult, context);
                 findings.addAll(moduleFindings);
                 log.debug("module={} findings={}", module.name(), moduleFindings.size());
             } catch (Exception e) {

@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface ScannerModule {
     String name();
-    List<Finding> scan(CrawlResult crawlResult, ScanContext context);
+    List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context);
 }

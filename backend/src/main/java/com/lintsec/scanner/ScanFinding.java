@@ -1,6 +1,8 @@
 package com.lintsec.scanner;
 
-public record Finding(
+import com.lintsec.domain.Severity;
+
+public record ScanFinding(
         String title,
         Severity severity,
         String module,
@@ -10,7 +12,7 @@ public record Finding(
         PayloadId evidenceRef,  // nullable
         String evidenceNote // nullable
 ) {
-    public Finding {
+    public ScanFinding {
         if (title == null || title.isBlank()) throw new IllegalArgumentException("title required");
         if (severity == null) throw new IllegalArgumentException("severity required");
         if (module == null || module.isBlank()) throw new IllegalArgumentException("module required");

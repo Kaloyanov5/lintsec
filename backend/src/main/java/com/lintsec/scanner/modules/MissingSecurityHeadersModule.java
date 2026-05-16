@@ -1,6 +1,7 @@
 package com.lintsec.scanner.modules;
 
 import com.lintsec.crawler.CrawlResult;
+import com.lintsec.domain.Severity;
 import com.lintsec.scanner.*;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -68,8 +69,8 @@ public final class MissingSecurityHeadersModule implements ScannerModule {
     }
 
     @Override
-    public List<Finding> scan(CrawlResult crawlResult, ScanContext context) {
-        List<Finding> findings = new ArrayList<>();
+    public List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context) {
+        List<ScanFinding> findings = new ArrayList<>();
 
         for (String url : crawlResult.visitedUrls()) {
             Connection.Response resp;
@@ -103,7 +104,7 @@ public final class MissingSecurityHeadersModule implements ScannerModule {
                         ? "Response did not include the " + rule.headerName + " header."
                         : "Response included " + rule.headerName + " but the value is not considered safe.";
 
-                findings.add(new Finding(
+                findings.add(new ScanFinding(
                         title,
                         rule.severity,
                         name(),
