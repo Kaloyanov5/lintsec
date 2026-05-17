@@ -22,6 +22,7 @@ public class PageFetcher {
             Document document = Jsoup.connect(url)
                     .userAgent(config.userAgent())
                     .timeout(config.timeoutMs())
+                    .ignoreContentType(true)
                     .get();
             return Optional.of(document);
         } catch (IOException e) {

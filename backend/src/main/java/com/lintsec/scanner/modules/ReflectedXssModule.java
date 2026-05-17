@@ -43,6 +43,7 @@ public final class ReflectedXssModule implements ScannerModule {
                             .method(Connection.Method.GET)
                             .ignoreHttpErrors(true)
                             .followRedirects(true)
+                            .ignoreContentType(true)
                             .execute();
                     log.debug("fetched URL: {} with status {}", url, resp.statusCode());
                 } catch (Exception e) {
