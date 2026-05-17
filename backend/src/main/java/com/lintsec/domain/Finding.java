@@ -60,6 +60,9 @@ public class Finding {
     @Column(length = 2000)
     private String description;
 
+    @Column(length = 4000)
+    private String remediation;
+
     @Lob
     @Column(name = "evidence_json")
     private String evidenceJson;
