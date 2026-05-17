@@ -7,12 +7,14 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+@Component
 public final class OpenRedirectModule implements ScannerModule {
     private static final Logger log = LoggerFactory.getLogger(OpenRedirectModule.class);
 

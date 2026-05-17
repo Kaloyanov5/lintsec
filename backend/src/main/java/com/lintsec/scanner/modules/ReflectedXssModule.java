@@ -7,10 +7,12 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.util.*;
 
+@Component
 public final class ReflectedXssModule implements ScannerModule {
     private static final Logger log = LoggerFactory.getLogger(ReflectedXssModule.class);
 

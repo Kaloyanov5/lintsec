@@ -3,10 +3,12 @@ package com.lintsec.scanner;
 import com.lintsec.crawler.CrawlResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class Scanner {
     private static final Logger log = LoggerFactory.getLogger(Scanner.class);
     private final List<ScannerModule> modules;

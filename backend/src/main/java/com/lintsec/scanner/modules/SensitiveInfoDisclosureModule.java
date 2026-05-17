@@ -10,12 +10,14 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Component
 public final class SensitiveInfoDisclosureModule implements ScannerModule {
     private static final Logger log = LoggerFactory.getLogger(SensitiveInfoDisclosureModule.class);
 
