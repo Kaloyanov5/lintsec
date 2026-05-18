@@ -15,6 +15,7 @@ public record FindingResponse(
         String remediation,
         String evidenceJson,    // raw JSON string — frontend parses
         String payloadRef,
+        String aiExplanation,
         Instant createdAt
 ) {
     public static FindingResponse from(Finding finding) {
@@ -27,6 +28,7 @@ public record FindingResponse(
                 finding.getRemediation(),
                 finding.getEvidenceJson(),
                 finding.getPayloadRef(),
+                finding.getAiExplanation(),
                 finding.getCreatedAt()
         );
     }
