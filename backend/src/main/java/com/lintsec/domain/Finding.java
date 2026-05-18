@@ -63,15 +63,13 @@ public class Finding {
     @Column(length = 4000)
     private String remediation;
 
-    @Lob
-    @Column(name = "evidence_json")
+    @Column(name = "evidence_json", columnDefinition = "TEXT")
     private String evidenceJson;
 
     @Column(name = "payload_ref", length = 64)
     private String payloadRef;
 
-    @Lob
-    @Column(name = "ai_explanation")
+    @Column(name = "ai_explanation", columnDefinition = "TEXT")
     private String aiExplanation;
 
     @CreationTimestamp
