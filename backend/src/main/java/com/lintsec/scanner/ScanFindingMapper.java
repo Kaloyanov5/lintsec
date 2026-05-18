@@ -38,6 +38,8 @@ public final class ScanFindingMapper {
             case "open-redirect" -> VulnerabilityType.OPEN_REDIRECT;
             case "reflected-xss" -> VulnerabilityType.XSS;
             case "error-based-sqli" -> VulnerabilityType.SQL_INJECTION;
+            case "cookie-security" -> VulnerabilityType.COOKIE_SECURITY;
+            case "cors-misconfig"  -> VulnerabilityType.CORS;
             default -> throw new IllegalStateException("unknown module: " + moduleName);
         };
     }
