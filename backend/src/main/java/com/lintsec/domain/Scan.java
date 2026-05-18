@@ -65,6 +65,9 @@ public class Scan {
     @Column(name = "request_delay_ms", nullable = false)
     private int requestDelayMs;
 
+    @Column(name = "ignore_robots", nullable = false)
+    private boolean ignoreRobots = false;
+
     @Column(name = "started_at")
     private Instant startedAt;
 

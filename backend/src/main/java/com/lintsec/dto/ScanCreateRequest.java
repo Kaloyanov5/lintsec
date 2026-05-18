@@ -22,6 +22,8 @@ public record ScanCreateRequest(
         int requestDelayMs,
 
         @AssertTrue(message = "must confirm ownership")
-        boolean ownershipConfirmed
+        boolean ownershipConfirmed,
+
+        boolean ignoreRobots
 ) {
 }

@@ -20,7 +20,9 @@ public class Crawler {
 
     public CrawlResult crawl(String startUrl) {
         UrlScope scope = new UrlScope(startUrl);
-        RobotsTxt robots = RobotsTxt.fetch(startUrl, config.userAgent(), config.timeoutMs());
+        RobotsTxt robots = config.ignoreRobots()
+                ? RobotsTxt.allowAll()
+                : RobotsTxt.fetch(startUrl, config.userAgent(), config.timeoutMs());
         int effectiveDelayMs = Math.max(config.delayMs(), robots.crawlDelayMs().orElse(0));
         ArrayDeque<QueueEntry> queue = new ArrayDeque<>();
         queue.add(new QueueEntry(startUrl, 0));

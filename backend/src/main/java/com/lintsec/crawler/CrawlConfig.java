@@ -5,7 +5,8 @@ public record CrawlConfig(
         int maxPages,
         int timeoutMs,
         int delayMs,
-        String userAgent
+        String userAgent,
+        boolean ignoreRobots
 ) {
     public CrawlConfig {
         if (maxDepth < 0 || maxDepth > 3) {
@@ -31,7 +32,8 @@ public record CrawlConfig(
                 50,
                 10000,
                 500,
-                "LintSec-Scanner/1.0"
+                "LintSec-Scanner/1.0",
+                false
         );
     }
 }

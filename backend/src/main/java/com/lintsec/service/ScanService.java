@@ -88,7 +88,8 @@ public class ScanService {
                     scan.getMaxPages(),
                     DEFAULT_TIMEOUT_MS,
                     scan.getRequestDelayMs(),
-                    DEFAULT_USER_AGENT
+                    DEFAULT_USER_AGENT,
+                    scan.isIgnoreRobots()
             );
             ScanContext scanContext = new ScanContext(crawlConfig.userAgent(), crawlConfig.timeoutMs(), true);
             CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl());
@@ -135,6 +136,7 @@ public class ScanService {
         scan.setMaxDepth(req.maxDepth());
         scan.setMaxPages(req.maxPages());
         scan.setRequestDelayMs(req.requestDelayMs());
+        scan.setIgnoreRobots(req.ignoreRobots());
         // status defaults to PENDING via entity initializer
         return scanRepository.save(scan);
     }
