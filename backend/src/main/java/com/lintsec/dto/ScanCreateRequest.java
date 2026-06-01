@@ -24,6 +24,12 @@ public record ScanCreateRequest(
         @AssertTrue(message = "must confirm ownership")
         boolean ownershipConfirmed,
 
-        boolean ignoreRobots
+        // Opt-in flag (pentest sandboxes that Disallow: /). Optional: a wrapper so an
+        // absent value deserializes to null instead of tripping FAIL_ON_NULL_FOR_PRIMITIVES,
+        // then we default it to false. Keeps the genuinely-required primitives above strict.
+        Boolean ignoreRobots
 ) {
+    public ScanCreateRequest {
+        if (ignoreRobots == null) ignoreRobots = false;
+    }
 }
