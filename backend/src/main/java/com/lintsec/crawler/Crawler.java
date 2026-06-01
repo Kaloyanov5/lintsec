@@ -30,6 +30,7 @@ public class Crawler {
         Set<String> seen = new HashSet<>();
         Set<String> visitedUrls = new HashSet<>();
         List<DiscoveredForm> forms = new ArrayList<>();
+        Set<String> formSignatures = new HashSet<>();
         Set<String> failedUrls = new HashSet<>();
 
         while (!queue.isEmpty() && visitedUrls.size() < config.maxPages()) {
@@ -52,7 +53,13 @@ public class Crawler {
             }
             Document document = optionalDocument.get();
             visitedUrls.add(url);
-            forms.addAll(FormExtractor.extractForms(document));
+            for (DiscoveredForm form : FormExtractor.extractForms(document)) {
+                // The same form (e.g. a header search box) appears on many pages;
+                // probe each distinct shape once.
+                if (formSignatures.add(formSignature(form))) {
+                    forms.add(form);
+                }
+            }
             if (depth < config.maxDepth()) {
                 for (String link : LinkExtractor.extractLinks(document)) {
                     if (scope.isInScope(link) && !seen.contains(link)) {
@@ -73,6 +80,11 @@ public class Crawler {
 
         log.info("crawl complete: visited={} failed={} forms={}", visitedUrls.size(), failedUrls.size(), forms.size());
         return new CrawlResult(visitedUrls, forms, failedUrls);
+    }
+
+    private static String formSignature(DiscoveredForm form) {
+        List<String> fieldNames = form.fields().stream().map(FormField::name).sorted().toList();
+        return form.method() + " " + form.action() + " " + fieldNames;
     }
 
     private record QueueEntry(

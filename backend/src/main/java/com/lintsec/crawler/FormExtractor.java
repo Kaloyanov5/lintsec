@@ -16,6 +16,10 @@ public final class FormExtractor {
         List<DiscoveredForm> forms = new ArrayList<>();
         for (FormElement form : doc.forms()) {
             String action = form.absUrl("action");
+            // A blank/missing action means the form submits back to the page it lives on.
+            if (action.isBlank()) action = doc.baseUri();
+            // No resolvable submit target — we can't probe it, so skip.
+            if (action.isBlank()) continue;
             String method = normalizeMethod(form.attr("method"));
 
             Elements fields = form.select("input, textarea, select");
