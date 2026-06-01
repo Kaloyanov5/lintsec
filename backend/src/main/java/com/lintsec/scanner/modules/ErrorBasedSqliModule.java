@@ -1,6 +1,7 @@
 package com.lintsec.scanner.modules;
 
 import com.lintsec.crawler.CrawlResult;
+import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.domain.Severity;
 import com.lintsec.scanner.*;
 import org.jsoup.Connection;
@@ -13,6 +14,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,26 +76,42 @@ public final class ErrorBasedSqliModule implements ScannerModule {
                     continue;
                 }
 
-                String body = resp.body();
-                for (SqlErrorPattern pattern : SQL_ERROR_PATTERNS) {
-                    Matcher matcher = pattern.pattern.matcher(body);
-                    if (matcher.find()) {
-                        findings.add(new ScanFinding(
-                                "Error-based SQL injection via parameter: " + paramName,
-                                Severity.HIGH,
-                                name(),
-                                new FindingLocation(url, paramName),
-                                "A query parameter is concatenated into a SQL query without parameterization. An attacker can inject SQL fragments to read arbitrary tables, bypass authentication, modify data, or execute database-level commands depending on the engine and the DB user's privileges.",
-                                "Use parameterized queries (prepared statements) for every SQL query that includes user input. In JDBC: PreparedStatement with ? placeholders. In JPA: query parameters (':paramName' or positional). Never concatenate input into query strings.",
-                                PayloadId.SQLI_SINGLE_QUOTE,
-                                "Database error signature for " + pattern.engineName + " matched at offset " + matcher.start()
-                        ));
-                        break;
-                    }
-                }
+                detect(resp.body(), new FindingLocation(url, paramName), "parameter: " + paramName)
+                        .ifPresent(findings::add);
+            }
+        }
+
+        // Form vector: submit each discovered form with the single-quote payload in one field at a time.
+        for (DiscoveredForm form : crawlResult.forms()) {
+            for (String field : FormSubmitter.fuzzableFields(form)) {
+                Optional<Connection.Response> respOpt =
+                        FormSubmitter.submit(form, field, payload, context, true);
+                if (respOpt.isEmpty()) continue;
+
+                detect(respOpt.get().body(), new FindingLocation(form.action(), field), "form field: " + field)
+                        .ifPresent(findings::add);
             }
         }
 
         return findings;
+    }
+
+    private Optional<ScanFinding> detect(String body, FindingLocation location, String vector) {
+        for (SqlErrorPattern pattern : SQL_ERROR_PATTERNS) {
+            Matcher matcher = pattern.pattern.matcher(body);
+            if (matcher.find()) {
+                return Optional.of(new ScanFinding(
+                        "Error-based SQL injection via " + vector,
+                        Severity.HIGH,
+                        name(),
+                        location,
+                        "A parameter is concatenated into a SQL query without parameterization. An attacker can inject SQL fragments to read arbitrary tables, bypass authentication, modify data, or execute database-level commands depending on the engine and the DB user's privileges.",
+                        "Use parameterized queries (prepared statements) for every SQL query that includes user input. In JDBC: PreparedStatement with ? placeholders. In JPA: query parameters (':paramName' or positional). Never concatenate input into query strings.",
+                        PayloadId.SQLI_SINGLE_QUOTE,
+                        "Database error signature for " + pattern.engineName + " matched at offset " + matcher.start()
+                ));
+            }
+        }
+        return Optional.empty();
     }
 }
