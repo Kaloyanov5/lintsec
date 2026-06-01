@@ -40,6 +40,9 @@ public final class ScanFindingMapper {
             case "error-based-sqli" -> VulnerabilityType.SQL_INJECTION;
             case "cookie-security" -> VulnerabilityType.COOKIE_SECURITY;
             case "cors-misconfig"  -> VulnerabilityType.CORS;
+            case "missing-csrf-token" -> VulnerabilityType.CSRF;
+            case "directory-listing" -> VulnerabilityType.DIRECTORY_LISTING;
+            case "http-method-tampering" -> VulnerabilityType.INSECURE_HTTP_METHOD;
             default -> throw new IllegalStateException("unknown module: " + moduleName);
         };
     }
