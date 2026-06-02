@@ -192,6 +192,11 @@ function ScanResults({ id }: { id: string }) {
           <span className={cn('rounded-full px-2.5 py-1 font-medium', STATUS_BADGE[scan.status])}>
             {scan.status}
           </span>
+          {scan.authenticated && (
+            <span className="rounded-full border border-[color:var(--color-border)] px-2.5 py-1 font-medium text-[color:var(--color-muted)]">
+              Authenticated
+            </span>
+          )}
           <span className="text-[color:var(--color-muted)]">{scan.pagesCrawled} pages crawled</span>
           <span className="text-[color:var(--color-muted)]">·</span>
           <span className="text-[color:var(--color-muted)]">

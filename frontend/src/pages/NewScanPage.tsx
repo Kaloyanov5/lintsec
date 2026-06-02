@@ -11,6 +11,18 @@ import { Input } from '@/components/ui/Input'
 import { parseProblem } from '@/lib/problem'
 import { scanService } from '@/services/scanService'
 
+const authSchema = z
+  .object({
+    loginUrl: z.string().optional(),
+    usernameField: z.string().optional(),
+    passwordField: z.string().optional(),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    successCheck: z.string().optional(),
+    sessionCookie: z.string().optional(),
+  })
+  .optional()
+
 const schema = z.object({
   targetUrl: z
     .string()
@@ -22,6 +34,8 @@ const schema = z.object({
     .boolean()
     .refine((v) => v, { message: 'You must confirm you are authorized to scan this target' }),
   ignoreRobots: z.boolean(),
+  authEnabled: z.boolean(),
+  auth: authSchema,
 })
 
 type ScanFormValues = z.infer<typeof schema>
@@ -38,12 +52,24 @@ export default function NewScanPage() {
       requestDelayMs: 300,
       ownershipConfirmed: false,
       ignoreRobots: false,
+      authEnabled: false,
+      auth: {
+        loginUrl: '',
+        usernameField: 'username',
+        passwordField: 'password',
+        username: '',
+        password: '',
+        successCheck: '',
+        sessionCookie: '',
+      },
     },
   })
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      const scan = await scanService.createScan(values)
+      const { authEnabled, auth, ...rest } = values
+      const body = authEnabled && auth ? { ...rest, auth } : rest
+      const scan = await scanService.createScan(body)
       toast.success('Scan started.')
       navigate(`/scans/${scan.id}`)
     } catch (err) {
@@ -105,6 +131,39 @@ export default function NewScanPage() {
           label="Ignore robots.txt (only for sandboxes that disallow crawling)"
           {...form.register('ignoreRobots')}
         />
+
+        <Checkbox
+          label="Authenticated scan (log in before crawling)"
+          {...form.register('authEnabled')}
+        />
+
+        {form.watch('authEnabled') && (
+          <div className="flex flex-col gap-4 rounded-md border border-[color:var(--color-border)] p-4">
+            <FormField label="Login page URL" hint="The page with the login form">
+              <Input type="url" placeholder="http://localhost:8081/login.php" {...form.register('auth.loginUrl')} />
+            </FormField>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Username field name" hint="HTML input name">
+                <Input placeholder="username" {...form.register('auth.usernameField')} />
+              </FormField>
+              <FormField label="Password field name" hint="HTML input name">
+                <Input placeholder="password" {...form.register('auth.passwordField')} />
+              </FormField>
+              <FormField label="Username">
+                <Input {...form.register('auth.username')} />
+              </FormField>
+              <FormField label="Password">
+                <Input type="password" {...form.register('auth.password')} />
+              </FormField>
+            </div>
+            <FormField label="Success check (optional)" hint="Text expected on a logged-in page, e.g. Logout">
+              <Input placeholder="Logout" {...form.register('auth.successCheck')} />
+            </FormField>
+            <FormField label="Or paste a session cookie (optional)" hint="Skips form login, e.g. PHPSESSID=abc123">
+              <Input placeholder="PHPSESSID=..." {...form.register('auth.sessionCookie')} />
+            </FormField>
+          </div>
+        )}
 
         <Button type="submit" loading={form.formState.isSubmitting} className="self-start">
           Start scan

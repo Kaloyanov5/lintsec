@@ -91,6 +91,7 @@ export default function ScanHistoryPage() {
                 </span>
                 <span className="block text-xs text-[color:var(--color-muted)]">
                   {scan.pagesCrawled} pages · {formatDate(scan.createdAt)}
+                  {scan.authenticated && ' · Authenticated'}
                 </span>
               </span>
             </Link>

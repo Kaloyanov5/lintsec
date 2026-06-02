@@ -14,6 +14,7 @@ export type Scan = {
   maxPages: number
   requestDelayMs: number
   pagesCrawled: number
+  authenticated: boolean
   errorMessage: string | null
   startedAt: string | null
   completedAt: string | null
@@ -21,6 +22,17 @@ export type Scan = {
 }
 
 export type FindingsBySeverity = Record<Severity, number>
+
+/** Optional authenticated-scan config sent with POST /api/scans. */
+export type AuthConfig = {
+  loginUrl?: string
+  usernameField?: string
+  passwordField?: string
+  username?: string
+  password?: string
+  successCheck?: string
+  sessionCookie?: string
+}
 
 /** Mirrors the backend ScanCreateRequest accepted by POST /api/scans. */
 export type CreateScanRequest = {
@@ -30,6 +42,7 @@ export type CreateScanRequest = {
   requestDelayMs: number
   ownershipConfirmed: boolean
   ignoreRobots?: boolean
+  auth?: AuthConfig
 }
 
 export type ScanSummary = {
