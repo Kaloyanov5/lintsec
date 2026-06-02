@@ -22,9 +22,14 @@ export type Scan = {
 
 export type FindingsBySeverity = Record<Severity, number>
 
+/** Mirrors the backend ScanCreateRequest accepted by POST /api/scans. */
 export type CreateScanRequest = {
   targetUrl: string
+  maxDepth: number
+  maxPages: number
+  requestDelayMs: number
   ownershipConfirmed: boolean
+  ignoreRobots?: boolean
 }
 
 export type ScanSummary = {
