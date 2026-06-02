@@ -13,6 +13,10 @@ public class Crawler {
     private final CrawlConfig config;
     private final PageFetcher fetcher;
 
+    // Following these would terminate an authenticated session mid-crawl.
+    private static final java.util.List<String> LOGOUT_MARKERS =
+            java.util.List.of("logout", "signout", "sign-out", "logoff");
+
     public Crawler(CrawlConfig config) {
         this.config = config;
         this.fetcher = new PageFetcher(config);
@@ -62,7 +66,7 @@ public class Crawler {
             }
             if (depth < config.maxDepth()) {
                 for (String link : LinkExtractor.extractLinks(document)) {
-                    if (scope.isInScope(link) && !seen.contains(link)) {
+                    if (scope.isInScope(link) && !seen.contains(link) && !isLogoutLink(link)) {
                         queue.add(new QueueEntry(link, depth + 1));
                     }
                 }
@@ -80,6 +84,14 @@ public class Crawler {
 
         log.info("crawl complete: visited={} failed={} forms={}", visitedUrls.size(), failedUrls.size(), forms.size());
         return new CrawlResult(visitedUrls, forms, failedUrls);
+    }
+
+    private static boolean isLogoutLink(String url) {
+        String lower = url.toLowerCase();
+        for (String marker : LOGOUT_MARKERS) {
+            if (lower.contains(marker)) return true;
+        }
+        return false;
     }
 
     private static String formSignature(DiscoveredForm form) {
