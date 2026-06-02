@@ -4,6 +4,8 @@ import com.lintsec.crawler.AuthSession;
 import com.lintsec.crawler.CrawlConfig;
 import com.lintsec.crawler.CrawlResult;
 import com.lintsec.crawler.Crawler;
+import com.lintsec.crawler.FormLoginAuthenticator;
+import com.lintsec.crawler.LoginConfig;
 import com.lintsec.domain.Finding;
 import com.lintsec.domain.Scan;
 import com.lintsec.domain.ScanPage;
@@ -42,6 +44,7 @@ public class ScanService {
     private final Scanner scanner;
     private final ScanFindingMapper mapper;
     private final ApplicationEventPublisher events;
+    private final FormLoginAuthenticator authenticator;
 
     public ScanService(
             ScanRepository scanRepository,
@@ -50,7 +53,8 @@ public class ScanService {
            UserRepository userRepository,
            Scanner scanner,
            ScanFindingMapper mapper,
-            ApplicationEventPublisher events
+            ApplicationEventPublisher events,
+            FormLoginAuthenticator authenticator
     ) {
         this.scanRepository = scanRepository;
         this.scanPageRepository = scanPageRepository;
@@ -59,18 +63,19 @@ public class ScanService {
         this.scanner = scanner;
         this.mapper = mapper;
         this.events = events;
+        this.authenticator = authenticator;
     }
 
     @Async
-    public void runScanAsync(Long scanId) {
+    public void runScanAsync(Long scanId, LoginConfig loginConfig) {
         try {
-            runScan(scanId);
+            runScan(scanId, loginConfig);
         } catch (Exception e) {
             log.error("uncaught error in async scan {}", scanId, e);
         }
     }
 
-    public void runScan(Long scanId) {
+    public void runScan(Long scanId, LoginConfig loginConfig) {
         Optional<Scan> optionalScan = scanRepository.findById(scanId);
         if (optionalScan.isEmpty()) throw new NotFoundException("scan does not exist");
         Scan scan = optionalScan.get();
@@ -84,6 +89,13 @@ public class ScanService {
                 0, 0, null));
 
         try {
+            AuthSession authSession = AuthSession.anonymous();
+            if (loginConfig != null) {
+                authSession = authenticator.authenticate(loginConfig);  // throws AuthenticationException on failure
+                scan.setAuthenticated(true);
+                scanRepository.save(scan);
+            }
+
             CrawlConfig crawlConfig = new CrawlConfig(
                     scan.getMaxDepth(),
                     scan.getMaxPages(),
@@ -91,7 +103,7 @@ public class ScanService {
                     scan.getRequestDelayMs(),
                     DEFAULT_USER_AGENT,
                     scan.isIgnoreRobots(),
-                    AuthSession.anonymous()
+                    authSession
             );
             ScanContext scanContext = new ScanContext(
                     crawlConfig.userAgent(), crawlConfig.timeoutMs(), true, crawlConfig.authSession());
@@ -142,6 +154,19 @@ public class ScanService {
         scan.setIgnoreRobots(req.ignoreRobots());
         // status defaults to PENDING via entity initializer
         return scanRepository.save(scan);
+    }
+
+    public LoginConfig toLoginConfig(ScanCreateRequest.AuthConfig auth) {
+        if (auth == null) return null;
+        return new LoginConfig(
+                auth.loginUrl(),
+                auth.usernameField(),
+                auth.passwordField(),
+                auth.username(),
+                auth.password(),
+                auth.successCheck(),
+                auth.sessionCookie()
+        );
     }
 
     private static String truncate(String s, int max) {

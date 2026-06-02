@@ -8,6 +8,7 @@ import com.lintsec.dto.FindingResponse;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanExport;
 import com.lintsec.dto.ScanResponse;
+import com.lintsec.crawler.LoginConfig;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.report.FindingGrouper;
 import com.lintsec.report.ScanReportPdfRenderer;
@@ -71,7 +72,8 @@ public class ScanController {
             @Valid @RequestBody ScanCreateRequest req
     ) {
         Scan scan = scanService.createScan(principal.id(), req);
-        scanService.runScanAsync(scan.getId());
+        LoginConfig loginConfig = scanService.toLoginConfig(req.auth());
+        scanService.runScanAsync(scan.getId(), loginConfig);
         return ResponseEntity.status(HttpStatus.CREATED).body(ScanResponse.from(scan));
     }
 
