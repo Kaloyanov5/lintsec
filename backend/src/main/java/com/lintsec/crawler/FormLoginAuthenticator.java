@@ -56,11 +56,18 @@ public class FormLoginAuthenticator {
         Map<String, String> formData = new LinkedHashMap<>();
         try {
             Document doc = loginPage.parse();
-            for (Element hidden : doc.select("input[type=hidden][name]")) {
-                formData.put(hidden.attr("name"), hidden.attr("value"));
+            // The login form is the one carrying the password field. Submit every named field
+            // with its default value so hidden CSRF tokens AND the submit button survive — many
+            // backends (e.g. DVWA) only authenticate when the submit button's name is present.
+            Element form = doc.selectFirst("form:has(input[type=password])");
+            if (form == null) form = doc.selectFirst("form");
+            if (form != null) {
+                for (Element field : form.select("input[name], select[name], textarea[name]")) {
+                    formData.put(field.attr("name"), field.attr("value"));
+                }
             }
         } catch (Exception e) {
-            log.debug("login page parse failed (no hidden fields scraped): {}", e.getMessage());
+            log.debug("login page parse failed (no form fields scraped): {}", e.getMessage());
         }
 
         // 2. Overlay credentials.
