@@ -68,6 +68,9 @@ public class Scan {
     @Column(name = "ignore_robots", nullable = false)
     private boolean ignoreRobots = false;
 
+    @Column(name = "authenticated", nullable = false)
+    private boolean authenticated = false;
+
     @Column(name = "started_at")
     private Instant startedAt;
 

@@ -13,6 +13,7 @@ public record ScanResponse(
         int maxPages,
         int requestDelayMs,
         int pagesCrawled,
+        boolean authenticated,
         String errorMessage,    // null when not failed
         Instant startedAt,      // null when pending
         Instant completedAt,    // null when not complete/failed
@@ -27,6 +28,7 @@ public record ScanResponse(
                 scan.getMaxPages(),
                 scan.getRequestDelayMs(),
                 scan.getPagesCrawled(),
+                scan.isAuthenticated(),
                 scan.getErrorMessage(),
                 scan.getStartedAt(),
                 scan.getCompletedAt(),
