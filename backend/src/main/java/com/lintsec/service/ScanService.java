@@ -1,5 +1,6 @@
 package com.lintsec.service;
 
+import com.lintsec.crawler.AuthSession;
 import com.lintsec.crawler.CrawlConfig;
 import com.lintsec.crawler.CrawlResult;
 import com.lintsec.crawler.Crawler;
@@ -89,7 +90,8 @@ public class ScanService {
                     DEFAULT_TIMEOUT_MS,
                     scan.getRequestDelayMs(),
                     DEFAULT_USER_AGENT,
-                    scan.isIgnoreRobots()
+                    scan.isIgnoreRobots(),
+                    AuthSession.anonymous()
             );
             ScanContext scanContext = new ScanContext(crawlConfig.userAgent(), crawlConfig.timeoutMs(), true);
             CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl());

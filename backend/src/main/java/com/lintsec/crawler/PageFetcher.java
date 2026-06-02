@@ -19,12 +19,12 @@ public class PageFetcher {
 
     public Optional<Document> fetch(String url) {
         try {
-            Document document = Jsoup.connect(url)
+            org.jsoup.Connection connection = Jsoup.connect(url)
                     .userAgent(config.userAgent())
                     .timeout(config.timeoutMs())
-                    .ignoreContentType(true)
-                    .get();
-            return Optional.of(document);
+                    .ignoreContentType(true);
+            config.authSession().applyTo(connection);
+            return Optional.of(connection.get());
         } catch (IOException e) {
             log.debug("fetch failed for {}: {}", url, e.getMessage());
             return Optional.empty();

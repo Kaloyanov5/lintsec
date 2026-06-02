@@ -6,7 +6,8 @@ public record CrawlConfig(
         int timeoutMs,
         int delayMs,
         String userAgent,
-        boolean ignoreRobots
+        boolean ignoreRobots,
+        AuthSession authSession
 ) {
     public CrawlConfig {
         if (maxDepth < 0 || maxDepth > 3) {
@@ -24,6 +25,9 @@ public record CrawlConfig(
         if (userAgent == null || userAgent.isBlank()) {
             throw new IllegalArgumentException("Invalid crawl user agent");
         }
+        if (authSession == null) {
+            authSession = AuthSession.anonymous();
+        }
     }
 
     public static CrawlConfig defaults() {
@@ -33,7 +37,8 @@ public record CrawlConfig(
                 10000,
                 500,
                 "LintSec-Scanner/1.0",
-                false
+                false,
+                AuthSession.anonymous()
         );
     }
 }
