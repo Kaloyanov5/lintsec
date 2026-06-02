@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -77,6 +78,22 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         pd.setTitle("Bad Request");
         pd.setDetail("request body is missing or malformed");
+        pd.setType(ERR_VALIDATION);
+        pd.setInstance(URI.create(req.getRequestURI()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(pd);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        // A path variable or query param that can't be bound to its target type (e.g. a non-numeric
+        // id like /api/scans/me hitting a Long {id}) is a client error, not a server error.
+        log.debug("argument type mismatch on {}: parameter '{}' value '{}'",
+                req.getRequestURI(), ex.getName(), ex.getValue());
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        pd.setTitle("Bad Request");
+        pd.setDetail("parameter '" + ex.getName() + "' has an invalid value");
         pd.setType(ERR_VALIDATION);
         pd.setInstance(URI.create(req.getRequestURI()));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
