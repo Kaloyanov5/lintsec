@@ -8,8 +8,31 @@ export type VulnerabilityType =
   | 'CORS'
   | 'SECURITY_HEADERS'
   | 'SENSITIVE_DATA'
+  | 'OPEN_REDIRECT'
+  | 'COOKIE_SECURITY'
+  | 'CSRF'
+  | 'DIRECTORY_LISTING'
+  | 'INSECURE_HTTP_METHOD'
 
 export type AiStatus = 'PENDING' | 'READY' | 'FAILED'
+
+/**
+ * Mirrors the backend `FindingResponse` returned by `GET /api/scans/{id}/findings`.
+ * This is the *live* shape; the FindingSummary/FindingDetail types below describe the
+ * richer CONTRACT.md target the backend has not yet caught up to.
+ */
+export type Finding = {
+  id: number
+  vulnerabilityType: VulnerabilityType
+  severity: Severity
+  title: string
+  description: string | null
+  remediation: string | null
+  evidenceJson: string | null
+  payloadRef: string | null
+  aiExplanation: string | null
+  createdAt: string
+}
 
 export type FindingSummary = {
   id: number

@@ -2,6 +2,24 @@ import type { Severity } from './finding'
 
 export type ScanStatus = 'PENDING' | 'RUNNING' | 'COMPLETE' | 'FAILED'
 
+/**
+ * Mirrors the backend `ScanResponse` returned by `GET /api/scans/{id}` and `GET /api/scans`.
+ * Live shape; ScanDetail/ScanSummary below are the richer CONTRACT.md target.
+ */
+export type Scan = {
+  id: number
+  targetUrl: string
+  status: ScanStatus
+  maxDepth: number
+  maxPages: number
+  requestDelayMs: number
+  pagesCrawled: number
+  errorMessage: string | null
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
+}
+
 export type FindingsBySeverity = Record<Severity, number>
 
 export type CreateScanRequest = {
