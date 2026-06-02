@@ -1,5 +1,7 @@
 import { api } from '@/lib/api'
-import type { CreateScanRequest, Finding, Page, Scan } from '@/types'
+import type { CreateScanRequest, Finding, FindingGroup, Page, Scan } from '@/types'
+
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export const scanService = {
   createScan(body: CreateScanRequest) {
@@ -16,5 +18,14 @@ export const scanService = {
 
   getFindings(id: number | string) {
     return api.get<Finding[]>(`/scans/${id}/findings`).then((r) => r.data)
+  },
+
+  getGroupedFindings(id: number | string) {
+    return api.get<FindingGroup[]>(`/scans/${id}/findings/grouped`).then((r) => r.data)
+  },
+
+  /** Direct download URL for an export; GET + same-origin cookie, no CSRF needed. */
+  exportUrl(id: number | string, format: 'pdf' | 'json') {
+    return `${apiBase}/scans/${id}/export.${format}`
   },
 }

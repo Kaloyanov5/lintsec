@@ -34,6 +34,32 @@ export type Finding = {
   createdAt: string
 }
 
+/** One occurrence within a {@link FindingGroup} — mirrors backend `FindingInstanceResponse`. */
+export type FindingInstance = {
+  id: number
+  url: string | null
+  parameter: string | null
+  note: string | null
+  payloadRef: string | null
+  createdAt: string
+}
+
+/**
+ * A set of duplicate findings collapsed by (type, severity, title) — mirrors backend
+ * `FindingGroupResponse` from `GET /api/scans/{id}/findings/grouped`. Descriptive fields are
+ * shared; the per-occurrence detail lives in `instances`.
+ */
+export type FindingGroup = {
+  vulnerabilityType: VulnerabilityType
+  severity: Severity
+  title: string
+  description: string | null
+  remediation: string | null
+  aiExplanation: string | null
+  count: number
+  instances: FindingInstance[]
+}
+
 export type FindingSummary = {
   id: number
   vulnerabilityType: VulnerabilityType
