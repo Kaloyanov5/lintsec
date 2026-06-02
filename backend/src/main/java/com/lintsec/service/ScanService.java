@@ -93,7 +93,8 @@ public class ScanService {
                     scan.isIgnoreRobots(),
                     AuthSession.anonymous()
             );
-            ScanContext scanContext = new ScanContext(crawlConfig.userAgent(), crawlConfig.timeoutMs(), true);
+            ScanContext scanContext = new ScanContext(
+                    crawlConfig.userAgent(), crawlConfig.timeoutMs(), true, crawlConfig.authSession());
             CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl());
             List<ScanPage> scanPages = result.visitedUrls().stream().map(url -> {
                 ScanPage scanPage = new ScanPage();

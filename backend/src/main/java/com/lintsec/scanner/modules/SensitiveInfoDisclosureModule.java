@@ -7,7 +7,6 @@ import com.lintsec.scanner.ScanFinding;
 import com.lintsec.scanner.ScanContext;
 import com.lintsec.scanner.ScannerModule;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -75,9 +74,7 @@ public final class SensitiveInfoDisclosureModule implements ScannerModule {
         for (String url : crawlResult.visitedUrls()) {
             Connection.Response resp;
             try {
-                resp = Jsoup.connect(url)
-                        .userAgent(context.userAgent())
-                        .timeout(context.timeoutMs())
+                resp = context.openConnection(url)
                         .method(Connection.Method.GET)
                         .ignoreHttpErrors(true)
                         .followRedirects(true)

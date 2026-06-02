@@ -4,7 +4,6 @@ import com.lintsec.crawler.CrawlResult;
 import com.lintsec.domain.Severity;
 import com.lintsec.scanner.*;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -50,9 +49,7 @@ public final class OpenRedirectModule implements ScannerModule {
 
                     Connection.Response resp;
                     try {
-                        resp = Jsoup.connect(mutatedUrl)
-                                .userAgent(context.userAgent())
-                                .timeout(context.timeoutMs())
+                        resp = context.openConnection(mutatedUrl)
                                 .method(Connection.Method.GET)
                                 .ignoreHttpErrors(true)
                                 .followRedirects(false)

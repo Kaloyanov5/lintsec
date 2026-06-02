@@ -7,7 +7,6 @@ import com.lintsec.scanner.ScanContext;
 import com.lintsec.scanner.ScanFinding;
 import com.lintsec.scanner.ScannerModule;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -99,9 +98,7 @@ public final class HttpMethodTamperingModule implements ScannerModule {
 
     private Optional<Connection.Response> probe(String url, Connection.Method method, ScanContext context) {
         try {
-            return Optional.of(Jsoup.connect(url)
-                    .userAgent(context.userAgent())
-                    .timeout(context.timeoutMs())
+            return Optional.of(context.openConnection(url)
                     .method(method)
                     .ignoreHttpErrors(true)
                     .followRedirects(false)

@@ -7,7 +7,6 @@ import com.lintsec.scanner.ScanContext;
 import com.lintsec.scanner.ScanFinding;
 import com.lintsec.scanner.ScannerModule;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -108,9 +107,7 @@ public final class CorsMisconfigurationModule implements ScannerModule {
 
     private Optional<Connection.Response> probeWithOrigin(String url, String origin, ScanContext context) {
         try {
-            return Optional.of(Jsoup.connect(url)
-                    .userAgent(context.userAgent())
-                    .timeout(context.timeoutMs())
+            return Optional.of(context.openConnection(url)
                     .header("Origin", origin)
                     .method(Connection.Method.GET)
                     .ignoreHttpErrors(true)

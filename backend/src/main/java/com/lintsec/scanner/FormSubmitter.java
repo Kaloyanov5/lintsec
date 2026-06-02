@@ -3,7 +3,6 @@ package com.lintsec.scanner;
 import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormField;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,9 +65,7 @@ public final class FormSubmitter {
                 : Connection.Method.POST;
 
         try {
-            Connection.Response resp = Jsoup.connect(form.action())
-                    .userAgent(context.userAgent())
-                    .timeout(context.timeoutMs())
+            Connection.Response resp = context.openConnection(form.action())
                     .method(method)
                     .data(data)
                     .ignoreHttpErrors(true)
