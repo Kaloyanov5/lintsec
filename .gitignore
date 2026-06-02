@@ -15,6 +15,9 @@ frontend/.env
 # Claude
 .claude/
 
+# Local design specs (not part of the published repo)
+docs/superpowers/specs/
+
 # IntelliJ IDEA
 .idea/
 *.iml
