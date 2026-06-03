@@ -8,8 +8,8 @@ function isTerminal(type: ScanEventType): boolean {
 
 /**
  * Subscribes to the live scan event stream while `enabled` is true and returns the most
- * recently received event (null until the first arrives). `onTerminal` fires once when a
- * terminal event (SCAN_COMPLETE/FAILED) arrives — the caller uses it to refetch findings.
+ * recently received event (null until the first arrives). `onTerminal` fires once with the
+ * terminal event (SCAN_COMPLETE/FAILED) when it arrives — the caller uses it to refetch findings.
  *
  * Owns the EventSource lifecycle: opens on enable, listens for the named `scan` event, and
  * closes on a terminal event and on unmount/disable. We close explicitly on terminal events
@@ -23,7 +23,7 @@ function isTerminal(type: ScanEventType): boolean {
 export function useScanEvents(
   id: string,
   enabled: boolean,
-  onTerminal?: () => void,
+  onTerminal?: (event: ScanEvent) => void,
 ): ScanEvent | null {
   const [event, setEvent] = useState<ScanEvent | null>(null)
 
@@ -44,7 +44,7 @@ export function useScanEvents(
       setEvent(data)
       if (isTerminal(data.type)) {
         source.close()
-        onTerminalRef.current?.()
+        onTerminalRef.current?.(data)
       }
     })
     // EventSource auto-retries transient drops on its own; nothing to do here. The manual

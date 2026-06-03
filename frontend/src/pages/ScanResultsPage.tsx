@@ -83,6 +83,7 @@ function ScanResults({ id }: { id: string }) {
   const [groups, setGroups] = useState<FindingGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [finalizing, setFinalizing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -128,10 +129,17 @@ function ScanResults({ id }: { id: string }) {
   // Live progress: subscribe to the scan event stream only while the scan can still change.
   // `live` starts false (scan is null pre-fetch), so an already-finished scan never opens a
   // stream — the backend stream has no replay to catch up on. On a terminal event the hook
-  // calls back to refetch the now-complete scan + findings.
+  // calls back so we can refetch the now-complete scan + findings.
   const live = scan?.status === 'PENDING' || scan?.status === 'RUNNING'
-  const liveEvent = useScanEvents(id, live, () => {
-    reload().catch((err) => setError(parseProblem(err).message))
+  const liveEvent = useScanEvents(id, live, (event) => {
+    // Hold a brief "Scan complete — loading findings" beat so results don't snap in abruptly.
+    // The panel stays up until BOTH the refetch and the beat finish (failures skip the beat).
+    const beatMs = event.type === 'SCAN_COMPLETE' ? 700 : 0
+    setFinalizing(true)
+    Promise.all([
+      reload().catch((err) => setError(parseProblem(err).message)),
+      new Promise((resolve) => setTimeout(resolve, beatMs)),
+    ]).then(() => setFinalizing(false))
   })
 
   function toggle(key: string) {
@@ -247,7 +255,7 @@ function ScanResults({ id }: { id: string }) {
 
       {/* Findings */}
       <div className="mt-6 space-y-3">
-        {live ? (
+        {live || finalizing ? (
           <LivePanel event={liveEvent} />
         ) : sorted.length === 0 ? (
           <p className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 text-center text-sm text-[color:var(--color-muted)]">
@@ -312,36 +320,52 @@ function ExportLink({
   )
 }
 
-/** Indeterminate live progress shown while a scan is RUNNING, driven by SSE milestones. */
+/** Step shown with a check when done, a spinner while in progress. */
+function LiveStep({ done, label }: { done: boolean; label: string }) {
+  return (
+    <li className="flex items-center gap-2 text-[color:var(--color-muted)]">
+      {done ? (
+        <Check size={15} className="text-emerald-500" aria-hidden="true" />
+      ) : (
+        <Spinner size="sm" />
+      )}
+      {label}
+    </li>
+  )
+}
+
+/**
+ * Indeterminate live progress shown while a scan is RUNNING or finalizing, driven by SSE
+ * milestones. On SCAN_COMPLETE it briefly reads "Scan complete · Loading findings…" before the
+ * page swaps in the results, so the transition isn't an abrupt jump.
+ */
 function LivePanel({ event }: { event: ScanEvent | null }) {
-  const crawlDone = event != null && event.type !== 'STARTED'
+  const failed = event?.type === 'FAILED'
+  const crawlDone = event != null && (event.type === 'CRAWL_COMPLETE' || event.type === 'SCAN_COMPLETE')
+  const scanDone = event?.type === 'SCAN_COMPLETE'
+  const heading = scanDone ? 'Scan complete' : failed ? 'Scan failed' : 'Scanning in progress'
+
   return (
     <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
-      <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--color-foreground)]">
-        <Spinner size="sm" />
-        Scanning in progress
-      </div>
-      <ul className="mt-4 space-y-2 text-sm">
-        <li className="flex items-center gap-2 text-[color:var(--color-muted)]">
-          {crawlDone ? (
-            <>
-              <Check size={15} className="text-emerald-500" aria-hidden="true" />
-              Crawled {event.pagesCrawled} pages
-            </>
-          ) : (
-            <>
-              <Spinner size="sm" />
-              Crawling…
-            </>
-          )}
-        </li>
-        {crawlDone && (
-          <li className="flex items-center gap-2 text-[color:var(--color-muted)]">
-            <Spinner size="sm" />
-            Running security modules…
-          </li>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        {scanDone ? (
+          <Check size={16} className="text-emerald-500" aria-hidden="true" />
+        ) : failed ? null : (
+          <Spinner size="sm" />
         )}
-      </ul>
+        <span className={cn(failed ? 'text-[color:var(--color-danger)]' : 'text-[color:var(--color-foreground)]')}>
+          {heading}
+        </span>
+      </div>
+      {!failed && (
+        <ul className="mt-4 space-y-2 text-sm">
+          <LiveStep done={crawlDone} label={crawlDone ? `Crawled ${event.pagesCrawled} pages` : 'Crawling…'} />
+          {crawlDone && (
+            <LiveStep done={scanDone} label={scanDone ? 'Security checks complete' : 'Running security modules…'} />
+          )}
+          {scanDone && <LiveStep done={false} label="Loading findings…" />}
+        </ul>
+      )}
     </div>
   )
 }
