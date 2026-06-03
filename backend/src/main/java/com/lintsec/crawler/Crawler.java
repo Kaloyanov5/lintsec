@@ -60,7 +60,7 @@ public class Crawler {
             for (DiscoveredForm form : FormExtractor.extractForms(document)) {
                 // The same form (e.g. a header search box) appears on many pages;
                 // probe each distinct shape once.
-                if (formSignatures.add(formSignature(form))) {
+                if (formSignatures.add(form.signature())) {
                     forms.add(form);
                 }
             }
@@ -92,11 +92,6 @@ public class Crawler {
             if (lower.contains(marker)) return true;
         }
         return false;
-    }
-
-    private static String formSignature(DiscoveredForm form) {
-        List<String> fieldNames = form.fields().stream().map(FormField::name).sorted().toList();
-        return form.method() + " " + form.action() + " " + fieldNames;
     }
 
     private record QueueEntry(

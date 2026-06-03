@@ -24,6 +24,7 @@ public final class FormExtractor {
 
             Elements fields = form.select("input, textarea, select");
             List<FormField> formFields = new ArrayList<>();
+            FormField submitControl = null;
             for (Element field : fields) {
                 String name = field.attr("name");
                 if (name.isBlank()) {
@@ -33,20 +34,22 @@ public final class FormExtractor {
                 if (type.isBlank()) {
                     type = "text";
                 }
-                if (
-                        type.equalsIgnoreCase("submit") ||
-                        type.equalsIgnoreCase("button") ||
-                        type.equalsIgnoreCase("reset") ||
-                        type.equalsIgnoreCase("image")
-                ) {
+                // reset/button never submit the form; skip entirely.
+                if (type.equalsIgnoreCase("reset") || type.equalsIgnoreCase("button")) {
                     continue;
                 }
-                String value = field.attr("value");
-
-                formFields.add(new FormField(name, type, value));
+                // Capture the FIRST named submit/image control so we can re-send it
+                // (many handlers run only when the submit key is present). Not a fuzzable field.
+                if (type.equalsIgnoreCase("submit") || type.equalsIgnoreCase("image")) {
+                    if (submitControl == null) {
+                        submitControl = new FormField(name, type, field.attr("value"));
+                    }
+                    continue;
+                }
+                formFields.add(new FormField(name, type, field.attr("value")));
             }
 
-            forms.add(new DiscoveredForm(action, method, formFields));
+            forms.add(new DiscoveredForm(action, method, formFields, submitControl, doc.baseUri()));
         }
 
         return forms;
