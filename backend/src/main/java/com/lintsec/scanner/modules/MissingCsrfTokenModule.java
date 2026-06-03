@@ -4,6 +4,7 @@ import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormField;
 import com.lintsec.crawler.CrawlResult;
 import com.lintsec.domain.Severity;
+import com.lintsec.scanner.CsrfTokens;
 import com.lintsec.scanner.FindingLocation;
 import com.lintsec.scanner.ScanContext;
 import com.lintsec.scanner.ScanFinding;
@@ -11,8 +12,6 @@ import com.lintsec.scanner.ScannerModule;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 /**
  * Flags state-changing (POST) forms that carry no anti-CSRF token field.
@@ -23,13 +22,6 @@ import java.util.Set;
  */
 @Component
 public final class MissingCsrfTokenModule implements ScannerModule {
-
-    // Substrings that mark a hidden field as an anti-CSRF token across common frameworks
-    // (Spring Security _csrf, Django csrfmiddlewaretoken, Rails authenticity_token, ASP.NET
-    // __RequestVerificationToken, generic nonce/xsrf).
-    private static final Set<String> TOKEN_NAME_PATTERNS = Set.of(
-            "csrf", "xsrf", "token", "authenticity", "nonce", "verification"
-    );
 
     @Override
     public String name() {
@@ -56,10 +48,7 @@ public final class MissingCsrfTokenModule implements ScannerModule {
 
     private static boolean hasTokenField(DiscoveredForm form) {
         for (FormField field : form.fields()) {
-            String lower = field.name().toLowerCase(Locale.ROOT);
-            for (String pattern : TOKEN_NAME_PATTERNS) {
-                if (lower.contains(pattern)) return true;
-            }
+            if (CsrfTokens.looksLikeTokenName(field.name())) return true;
         }
         return false;
     }
