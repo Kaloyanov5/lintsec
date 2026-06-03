@@ -13,9 +13,11 @@ public class Crawler {
     private final CrawlConfig config;
     private final PageFetcher fetcher;
 
-    // Following these would terminate an authenticated session mid-crawl.
-    private static final java.util.List<String> LOGOUT_MARKERS =
-            java.util.List.of("logout", "signout", "sign-out", "logoff");
+    // GET links that mutate session or security state — following them sabotages the scan:
+    // logout/signout kill the authenticated session; phpids toggles an intrusion-detection
+    // system that then blocks the active modules' probe payloads (e.g. the SQLi single-quote).
+    private static final java.util.List<String> STATE_CHANGING_LINK_MARKERS =
+            java.util.List.of("logout", "signout", "sign-out", "logoff", "phpids");
 
     public Crawler(CrawlConfig config) {
         this.config = config;
@@ -66,7 +68,7 @@ public class Crawler {
             }
             if (depth < config.maxDepth()) {
                 for (String link : LinkExtractor.extractLinks(document)) {
-                    if (scope.isInScope(link) && !seen.contains(link) && !isLogoutLink(link)) {
+                    if (scope.isInScope(link) && !seen.contains(link) && !isStateChangingLink(link)) {
                         queue.add(new QueueEntry(link, depth + 1));
                     }
                 }
@@ -86,9 +88,11 @@ public class Crawler {
         return new CrawlResult(visitedUrls, forms, failedUrls);
     }
 
-    private static boolean isLogoutLink(String url) {
-        String lower = url.toLowerCase();
-        for (String marker : LOGOUT_MARKERS) {
+    // Substring match is intentionally broad: skipping an over-matched link only forgoes a probe,
+    // never breaks the scan. Tighten to path/query-key matching if real targets get under-crawled.
+    static boolean isStateChangingLink(String url) {
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        for (String marker : STATE_CHANGING_LINK_MARKERS) {
             if (lower.contains(marker)) return true;
         }
         return false;
