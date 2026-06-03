@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FormSubmitterTest {
 
@@ -110,5 +111,63 @@ class FormSubmitterTest {
 
         assertEquals("PAYLOAD", data.get("bio"));
         assertEquals("42", data.get("section_id")); // discovered default preserved
+    }
+
+    // --- state-changing forms must NOT be actively fuzzed (they sabotage the scan session) ---
+
+    @Test
+    void skipsSecurityLevelControlForm() {
+        // DVWA's /security.php form: fuzzing it flips the session security level to "impossible",
+        // hardening every later probe. Confirmed root cause of authenticated SQLi false-negatives.
+        DiscoveredForm form = new DiscoveredForm(
+                "https://target.test/security.php", "POST",
+                List.of(new FormField("security", "text", "low")),
+                new FormField("seclev_submit", "submit", "Submit"),
+                "https://target.test/security.php");
+        assertTrue(FormSubmitter.isStateChangingForm(form));
+    }
+
+    @Test
+    void skipsCredentialForms() {
+        DiscoveredForm login = new DiscoveredForm(
+                "https://target.test/login.php", "POST",
+                List.of(new FormField("username", "text", ""), new FormField("password", "password", "")),
+                new FormField("Login", "submit", "Login"),
+                "https://target.test/login.php");
+        // password-change form (DVWA csrf page): caught by the password-typed field, not the URL.
+        DiscoveredForm pwChange = new DiscoveredForm(
+                "https://target.test/vulnerabilities/csrf/", "GET",
+                List.of(new FormField("password_new", "password", ""), new FormField("password_conf", "password", "")),
+                new FormField("Change", "submit", "Change"),
+                "https://target.test/vulnerabilities/csrf/");
+        assertTrue(FormSubmitter.isStateChangingForm(login));
+        assertTrue(FormSubmitter.isStateChangingForm(pwChange));
+    }
+
+    @Test
+    void skipsLogoutAndSetupForms() {
+        assertTrue(FormSubmitter.isStateChangingForm(new DiscoveredForm(
+                "https://target.test/logout.php", "POST",
+                List.of(new FormField("x", "text", "")), null, "https://target.test/logout.php")));
+        assertTrue(FormSubmitter.isStateChangingForm(new DiscoveredForm(
+                "https://target.test/setup.php", "POST",
+                List.of(new FormField("create_db", "text", "")),
+                new FormField("create_db", "submit", "Create"), "https://target.test/setup.php")));
+    }
+
+    @Test
+    void doesNotSkipOrdinaryVulnerableForms() {
+        DiscoveredForm sqli = new DiscoveredForm(
+                "https://target.test/vulnerabilities/sqli/", "GET",
+                List.of(new FormField("id", "text", "")),
+                new FormField("Submit", "submit", "Submit"),
+                "https://target.test/vulnerabilities/sqli/");
+        DiscoveredForm guestbook = new DiscoveredForm(
+                "https://target.test/vulnerabilities/xss_s/", "POST",
+                List.of(new FormField("txtName", "text", ""), new FormField("mtxMessage", "textarea", "")),
+                new FormField("btnSign", "submit", "Sign Guestbook"),
+                "https://target.test/vulnerabilities/xss_s/");
+        assertFalse(FormSubmitter.isStateChangingForm(sqli));
+        assertFalse(FormSubmitter.isStateChangingForm(guestbook));
     }
 }

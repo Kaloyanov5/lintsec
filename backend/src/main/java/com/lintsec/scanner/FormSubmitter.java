@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,7 +31,33 @@ public final class FormSubmitter {
             "text", "search", "url", "email", "tel", "password", "textarea", ""
     );
 
+    // Action-URL substrings marking forms that control the scanner's own session/security/setup.
+    // Submitting these mid-scan sabotages the rest of the run — e.g. DVWA's /security.php form
+    // coerces an unknown level to "impossible", hardening every subsequent probe in the shared
+    // AuthSession. Mirrors the Crawler's logout-link skip, but for active submission.
+    private static final Set<String> STATE_CHANGING_ACTION_MARKERS = Set.of(
+            "logout", "signout", "sign-out", "logoff",
+            "login", "signin", "sign-in", "security", "setup"
+    );
+
     private FormSubmitter() {}
+
+    /**
+     * Whether this form must NOT be actively fuzzed because submitting it would alter the scan's
+     * own session, security level, or credentials. True if the action targets a session/security/
+     * setup endpoint, or the form carries a password field (login / password-change). Passive
+     * modules still see these forms via {@code crawlResult.forms()}; only active submission skips.
+     */
+    static boolean isStateChangingForm(DiscoveredForm form) {
+        String action = form.action() == null ? "" : form.action().toLowerCase(Locale.ROOT);
+        for (String marker : STATE_CHANGING_ACTION_MARKERS) {
+            if (action.contains(marker)) return true;
+        }
+        for (FormField field : form.fields()) {
+            if ("password".equalsIgnoreCase(field.type())) return true;
+        }
+        return false;
+    }
 
     /** Names of the fields in this form that are worth injecting a payload into. */
     public static List<String> fuzzableFields(DiscoveredForm form) {
@@ -53,6 +80,14 @@ public final class FormSubmitter {
             String payload,
             ScanContext context,
             boolean followRedirects) {
+
+        // Never fuzz forms that control our own session/security/credentials — submitting them
+        // poisons the rest of the scan (e.g. flips DVWA's security level to "impossible").
+        if (isStateChangingForm(form)) {
+            log.debug("skipping state-changing form {} — not fuzzing (would alter scan session/credentials)",
+                    form.action());
+            return Optional.empty();
+        }
 
         // For token-bearing forms, re-fetch a fresh single-use token immediately before submitting.
         Map<String, String> freshHidden =
