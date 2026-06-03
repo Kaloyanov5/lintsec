@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  Check,
   ChevronDown,
   Download,
   FileJson,
@@ -10,12 +11,13 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { scanService } from '@/services/scanService'
+import { useScanEvents } from '@/hooks/useScanEvents'
 import { parseProblem } from '@/lib/problem'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import type { FindingGroup, Severity, VulnerabilityType } from '@/types'
-import type { Scan, ScanStatus } from '@/types'
+import type { Scan, ScanStatus, ScanEvent } from '@/types'
 
 const SEVERITY_ORDER: Record<Severity, number> = {
   CRITICAL: 0,
@@ -103,21 +105,34 @@ function ScanResults({ id }: { id: string }) {
     }
   }, [id])
 
+  const reload = useCallback(async () => {
+    const [scanData, groupData] = await Promise.all([
+      scanService.getScan(id),
+      scanService.getGroupedFindings(id),
+    ])
+    setScan(scanData)
+    setGroups(groupData)
+  }, [id])
+
   async function handleRefresh() {
     setRefreshing(true)
     try {
-      const [scanData, groupData] = await Promise.all([
-        scanService.getScan(id),
-        scanService.getGroupedFindings(id),
-      ])
-      setScan(scanData)
-      setGroups(groupData)
+      await reload()
     } catch (err) {
       setError(parseProblem(err).message)
     } finally {
       setRefreshing(false)
     }
   }
+
+  // Live progress: subscribe to the scan event stream only while the scan can still change.
+  // `live` starts false (scan is null pre-fetch), so an already-finished scan never opens a
+  // stream — the backend stream has no replay to catch up on. On a terminal event the hook
+  // calls back to refetch the now-complete scan + findings.
+  const live = scan?.status === 'PENDING' || scan?.status === 'RUNNING'
+  const liveEvent = useScanEvents(id, live, () => {
+    reload().catch((err) => setError(parseProblem(err).message))
+  })
 
   function toggle(key: string) {
     setExpanded((prev) => {
@@ -209,6 +224,12 @@ function ScanResults({ id }: { id: string }) {
         </div>
       )}
 
+      {scan?.status === 'FAILED' && scan.errorMessage && (
+        <p className="mt-3 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-danger)]">
+          {scan.errorMessage}
+        </p>
+      )}
+
       {/* Severity summary (distinct issues per severity) */}
       <div className="mt-5 flex flex-wrap gap-2">
         {SEVERITIES.map((sev) => (
@@ -224,15 +245,11 @@ function ScanResults({ id }: { id: string }) {
         ))}
       </div>
 
-      {scan?.status === 'RUNNING' && (
-        <p className="mt-4 text-sm text-[color:var(--color-muted)]">
-          This scan is still running — refresh to see new findings as they arrive.
-        </p>
-      )}
-
       {/* Findings */}
       <div className="mt-6 space-y-3">
-        {sorted.length === 0 ? (
+        {live ? (
+          <LivePanel event={liveEvent} />
+        ) : sorted.length === 0 ? (
           <p className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 text-center text-sm text-[color:var(--color-muted)]">
             No findings for this scan.
           </p>
@@ -292,6 +309,40 @@ function ExportLink({
       {icon}
       {children}
     </a>
+  )
+}
+
+/** Indeterminate live progress shown while a scan is RUNNING, driven by SSE milestones. */
+function LivePanel({ event }: { event: ScanEvent | null }) {
+  const crawlDone = event != null && event.type !== 'STARTED'
+  return (
+    <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
+      <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--color-foreground)]">
+        <Spinner size="sm" />
+        Scanning in progress
+      </div>
+      <ul className="mt-4 space-y-2 text-sm">
+        <li className="flex items-center gap-2 text-[color:var(--color-muted)]">
+          {crawlDone ? (
+            <>
+              <Check size={15} className="text-emerald-500" aria-hidden="true" />
+              Crawled {event.pagesCrawled} pages
+            </>
+          ) : (
+            <>
+              <Spinner size="sm" />
+              Crawling…
+            </>
+          )}
+        </li>
+        {crawlDone && (
+          <li className="flex items-center gap-2 text-[color:var(--color-muted)]">
+            <Spinner size="sm" />
+            Running security modules…
+          </li>
+        )}
+      </ul>
+    </div>
   )
 }
 
