@@ -54,10 +54,10 @@ public final class FormSubmitter {
             ScanContext context,
             boolean followRedirects) {
 
-        Map<String, String> data = new LinkedHashMap<>();
-        for (FormField field : form.fields()) {
-            data.put(field.name(), field.name().equals(targetField) ? payload : fillerFor(field));
-        }
+        // For token-bearing forms, re-fetch a fresh single-use token immediately before submitting.
+        Map<String, String> freshHidden =
+                FormStateRefresher.freshHiddenValues(form, context).orElse(Map.of());
+        Map<String, String> data = buildSubmissionData(form, targetField, payload, freshHidden);
 
         // HTML forms only support GET and POST; treat anything else as POST.
         Connection.Method method = "GET".equalsIgnoreCase(form.method())
@@ -79,6 +79,45 @@ public final class FormSubmitter {
             log.warn("form submit failed for {} field {}: {}", form.action(), targetField, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /**
+     * Build the submitted field map: {@code payload} in {@code targetField}; fresh hidden
+     * values where supplied; benign fillers (or discovered defaults) elsewhere; plus the
+     * form's submit control so handlers guarded by {@code isset($_POST['Submit'])} fire.
+     */
+    static Map<String, String> buildSubmissionData(
+            DiscoveredForm form,
+            String targetField,
+            String payload,
+            Map<String, String> freshHidden) {
+
+        Map<String, String> data = new LinkedHashMap<>();
+        for (FormField field : form.fields()) {
+            String name = field.name();
+            // Target field wins over a fresh value on purpose: fuzzing that field is the point.
+            if (name.equals(targetField)) {
+                data.put(name, payload);
+            } else if (freshHidden.containsKey(name)) {
+                data.put(name, freshHidden.get(name));
+            } else {
+                data.put(name, fillerFor(field));
+            }
+        }
+
+        FormField submit = form.submitControl();
+        if (submit != null && !submit.name().isBlank()) {
+            if ("image".equalsIgnoreCase(submit.type())) {
+                data.put(submit.name() + ".x", "1");
+                data.put(submit.name() + ".y", "1");
+            } else {
+                String value = (submit.value() == null || submit.value().isBlank())
+                        ? submit.name()
+                        : submit.value();
+                data.put(submit.name(), value);
+            }
+        }
+        return data;
     }
 
     private static String fillerFor(FormField field) {
