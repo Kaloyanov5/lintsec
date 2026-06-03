@@ -1,28 +1,10 @@
-import type { FindingSummary } from './finding'
-import type { ScanDetail, ScanPageDto } from './scan'
+export type ScanEventType = 'STARTED' | 'CRAWL_COMPLETE' | 'SCAN_COMPLETE' | 'FAILED'
 
-export type ScanPhase = 'CRAWLING' | 'SCANNING'
-
-export type ProgressEventData = {
-  phase: ScanPhase
-  percent: number
+/** Mirrors the backend `ScanEvent` record, sent as the named SSE event `scan`. */
+export type ScanEvent = {
+  scanId: number
+  type: ScanEventType
   pagesCrawled: number
-  totalPages: number
-  currentScanner?: string
+  findingsCount: number
+  message: string | null
 }
-
-export type AiReadyEventData = {
-  findingId: number
-}
-
-export type ErrorEventData = {
-  message: string
-}
-
-export type ScanEvent =
-  | { type: 'progress'; data: ProgressEventData }
-  | { type: 'page-crawled'; data: ScanPageDto }
-  | { type: 'finding'; data: FindingSummary }
-  | { type: 'ai-ready'; data: AiReadyEventData }
-  | { type: 'complete'; data: ScanDetail }
-  | { type: 'error'; data: ErrorEventData }
