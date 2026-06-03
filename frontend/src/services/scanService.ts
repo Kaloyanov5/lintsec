@@ -28,4 +28,9 @@ export const scanService = {
   exportUrl(id: number | string, format: 'pdf' | 'json') {
     return `${apiBase}/scans/${id}/export.${format}`
   },
+
+  /** Live event stream URL; consumed by EventSource (GET + same-origin cookie, no CSRF). */
+  eventsUrl(id: number | string) {
+    return `${apiBase}/scans/${id}/events`
+  },
 }
