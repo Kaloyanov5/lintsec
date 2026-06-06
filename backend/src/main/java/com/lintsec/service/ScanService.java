@@ -12,6 +12,7 @@ import com.lintsec.domain.ScanPage;
 import com.lintsec.domain.ScanStatus;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanEvent;
+import com.lintsec.dto.ScanStatsResponse;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.FindingRepository;
 import com.lintsec.repository.ScanPageRepository;
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -154,6 +156,14 @@ public class ScanService {
         scan.setIgnoreRobots(req.ignoreRobots());
         // status defaults to PENDING via entity initializer
         return scanRepository.save(scan);
+    }
+
+    @Transactional(readOnly = true)
+    public ScanStatsResponse getStats(Long userId) {
+        long totalScans = scanRepository.countByUserId(userId);
+        long completedScans = scanRepository.countByUserIdAndStatus(userId, ScanStatus.COMPLETE);
+        List<Object[]> severityRows = findingRepository.countBySeverityForUser(userId);
+        return ScanStatsResponse.from(totalScans, completedScans, severityRows);
     }
 
     public LoginConfig toLoginConfig(ScanCreateRequest.AuthConfig auth) {
