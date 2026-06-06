@@ -17,6 +17,7 @@ frontend/.env
 
 # Local design docs / plans (not part of the published repo)
 docs/superpowers/
+.superpowers/
 
 # IntelliJ IDEA
 .idea/
