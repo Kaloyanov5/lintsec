@@ -27,6 +27,7 @@ export function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const userRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   // Close the user dropdown on outside-click or Escape. Listeners only — no setState in the
   // effect body (keeps the React Compiler lint happy).
@@ -36,7 +37,10 @@ export function AppHeader() {
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false)
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setUserOpen(false)
+      if (e.key === 'Escape') {
+        setUserOpen(false)
+        triggerRef.current?.focus()
+      }
     }
     document.addEventListener('mousedown', onDocClick)
     document.addEventListener('keydown', onKey)
@@ -82,6 +86,7 @@ export function AppHeader() {
               <div className="relative hidden md:block" ref={userRef}>
                 <button
                   type="button"
+                  ref={triggerRef}
                   onClick={() => setUserOpen((open) => !open)}
                   aria-haspopup="menu"
                   aria-expanded={userOpen}
@@ -92,6 +97,7 @@ export function AppHeader() {
                 </button>
                 <div
                   role="menu"
+                  inert={!userOpen}
                   className={cn(
                     'absolute right-0 top-full mt-2 w-56 origin-top-right rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/95 p-1.5 shadow-lg backdrop-blur transition-all duration-150 ease-out',
                     userOpen
@@ -130,6 +136,7 @@ export function AppHeader() {
         </div>
 
         <div
+          inert={!menuOpen}
           className={cn(
             'absolute inset-x-4 top-full mt-2 origin-top rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/95 p-2 shadow-lg backdrop-blur transition-all duration-200 ease-out md:hidden',
             menuOpen
