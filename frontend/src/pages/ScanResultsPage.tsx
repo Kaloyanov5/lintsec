@@ -13,29 +13,12 @@ import {
 import { scanService } from '@/services/scanService'
 import { useScanEvents } from '@/hooks/useScanEvents'
 import { parseProblem } from '@/lib/problem'
+import { SEVERITIES, SEVERITY_BADGE, SEVERITY_ORDER } from '@/lib/severity'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import type { FindingGroup, Severity, VulnerabilityType } from '@/types'
 import type { Scan, ScanStatus, ScanEvent } from '@/types'
-
-const SEVERITY_ORDER: Record<Severity, number> = {
-  CRITICAL: 0,
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-  INFO: 4,
-}
-
-const SEVERITY_BADGE: Record<Severity, string> = {
-  CRITICAL: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
-  HIGH: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
-  MEDIUM: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  LOW: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
-  INFO: 'bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300',
-}
-
-const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
 
 const VULN_LABEL: Record<VulnerabilityType, string> = {
   XSS: 'Cross-Site Scripting',
