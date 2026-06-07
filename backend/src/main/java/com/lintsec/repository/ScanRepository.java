@@ -17,4 +17,6 @@ public interface ScanRepository extends JpaRepository<Scan, Long> {
     Optional<Scan> findByIdAndUserId(Long id, Long userId);
 
     long countByUserIdAndStatus(Long userId, ScanStatus status);
+
+    long countByUserId(Long userId);
 }

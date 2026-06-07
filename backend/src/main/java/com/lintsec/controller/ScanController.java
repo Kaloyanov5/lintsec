@@ -8,6 +8,7 @@ import com.lintsec.dto.FindingResponse;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanExport;
 import com.lintsec.dto.ScanResponse;
+import com.lintsec.dto.ScanStatsResponse;
 import com.lintsec.crawler.LoginConfig;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.report.FindingGrouper;
@@ -84,6 +85,11 @@ public class ScanController {
     ) {
         return scanRepository.findByUserIdOrderByCreatedAtDesc(principal.id(), pageable)
                 .map(ScanResponse::from);
+    }
+
+    @GetMapping("/stats")
+    public ScanStatsResponse stats(@AuthenticationPrincipal AppUserPrincipal principal) {
+        return scanService.getStats(principal.id());
     }
 
     @GetMapping("/{id}")

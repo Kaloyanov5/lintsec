@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { CreateScanRequest, Finding, FindingGroup, Page, Scan } from '@/types'
+import type { CreateScanRequest, Finding, FindingGroup, Page, Scan, ScanStats } from '@/types'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -14,6 +14,10 @@ export const scanService = {
 
   getScan(id: number | string) {
     return api.get<Scan>(`/scans/${id}`).then((r) => r.data)
+  },
+
+  getStats() {
+    return api.get<ScanStats>('/scans/stats').then((r) => r.data)
   },
 
   getFindings(id: number | string) {

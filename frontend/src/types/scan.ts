@@ -23,6 +23,14 @@ export type Scan = {
 
 export type FindingsBySeverity = Record<Severity, number>
 
+/** Mirrors the backend `ScanStatsResponse` from `GET /api/scans/stats` (per-user aggregate). */
+export type ScanStats = {
+  totalScans: number
+  completedScans: number
+  totalFindings: number
+  findingsBySeverity: FindingsBySeverity
+}
+
 /** Optional authenticated-scan config sent with POST /api/scans. */
 export type AuthConfig = {
   loginUrl?: string
