@@ -43,6 +43,10 @@ public final class ScanFindingMapper {
             case "missing-csrf-token" -> VulnerabilityType.CSRF;
             case "directory-listing" -> VulnerabilityType.DIRECTORY_LISTING;
             case "http-method-tampering" -> VulnerabilityType.INSECURE_HTTP_METHOD;
+            case "path-traversal" -> VulnerabilityType.PATH_TRAVERSAL;
+            case "command-injection" -> VulnerabilityType.COMMAND_INJECTION;
+            case "mixed-content" -> VulnerabilityType.MIXED_CONTENT;
+            case "missing-sri" -> VulnerabilityType.MISSING_SRI;
             default -> throw new IllegalStateException("unknown module: " + moduleName);
         };
     }

@@ -198,6 +198,10 @@ public class ScanReportPdfRenderer {
             case CSRF -> "CSRF";
             case DIRECTORY_LISTING -> "Directory Listing";
             case INSECURE_HTTP_METHOD -> "Insecure HTTP Method";
+            case PATH_TRAVERSAL -> "Path Traversal";
+            case COMMAND_INJECTION -> "Command Injection";
+            case MIXED_CONTENT -> "Mixed Content";
+            case MISSING_SRI -> "Missing Subresource Integrity";
         };
     }
 
