@@ -24,6 +24,15 @@ class UrlParamsTest {
     }
 
     @Test
+    void encodesCommandInjectionPayloadOnce() {
+        // The metacharacter-bearing cmdi payloads must survive the URL vector intact:
+        // '&' -> %26 (not %2526) and space -> '+', so the server decodes a real "& ver".
+        String result = UrlParams.replaceQueryParameters(
+                "http://t.test/exec?ip=127.0.0.1", "ip", "& ver");
+        assertEquals("http://t.test/exec?ip=%26+ver", result);
+    }
+
+    @Test
     void preservesOtherParameters() {
         String result = UrlParams.replaceQueryParameters(
                 "http://t.test/p?a=1&b=2&c=3", "b", "x/y");
