@@ -1,8 +1,5 @@
 package com.lintsec.scanner;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -13,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 public final class UrlParams {
-    private static final Logger log = LoggerFactory.getLogger(UrlParams.class);
 
     private UrlParams() {}
 
@@ -67,11 +63,17 @@ public final class UrlParams {
             }
         }
 
-        try {
-            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), newQueryBuilder.toString(), uri.getFragment()).toString();
-        } catch (Exception e) {
-            log.warn("Failed to reconstruct URI", e);
-            return url;
-        }
+        // Rebuild the URL by concatenating the raw components. We must NOT use the multi-argument
+        // `new URI(scheme, authority, path, query, fragment)` constructor here: it treats its query
+        // argument as decoded text and percent-encodes it again, turning our already-encoded
+        // payload's "%2F" into "%252F". That double-encoding reaches the server as a literal
+        // "..%2F.." instead of a real "../", silently breaking every URL-query-parameter probe.
+        StringBuilder result = new StringBuilder();
+        if (uri.getScheme() != null) result.append(uri.getScheme()).append("://");
+        if (uri.getRawAuthority() != null) result.append(uri.getRawAuthority());
+        if (uri.getRawPath() != null) result.append(uri.getRawPath());
+        result.append("?").append(newQueryBuilder);
+        if (uri.getRawFragment() != null) result.append("#").append(uri.getRawFragment());
+        return result.toString();
     }
 }

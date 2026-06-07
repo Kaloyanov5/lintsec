@@ -13,6 +13,10 @@ export type VulnerabilityType =
   | 'CSRF'
   | 'DIRECTORY_LISTING'
   | 'INSECURE_HTTP_METHOD'
+  | 'PATH_TRAVERSAL'
+  | 'COMMAND_INJECTION'
+  | 'MIXED_CONTENT'
+  | 'MISSING_SRI'
 
 export type AiStatus = 'PENDING' | 'READY' | 'FAILED'
 

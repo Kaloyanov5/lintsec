@@ -31,6 +31,10 @@ const VULN_LABEL: Record<VulnerabilityType, string> = {
   CSRF: 'CSRF',
   DIRECTORY_LISTING: 'Directory Listing',
   INSECURE_HTTP_METHOD: 'Insecure HTTP Method',
+  PATH_TRAVERSAL: 'Path Traversal',
+  COMMAND_INJECTION: 'Command Injection',
+  MIXED_CONTENT: 'Mixed Content',
+  MISSING_SRI: 'Missing Subresource Integrity',
 }
 
 const STATUS_BADGE: Record<ScanStatus, string> = {
