@@ -16,6 +16,14 @@ export const scanService = {
     return api.get<Scan>(`/scans/${id}`).then((r) => r.data)
   },
 
+  cancelScan(id: number | string) {
+    return api.post<Scan>(`/scans/${id}/cancel`).then((r) => r.data)
+  },
+
+  deleteScan(id: number | string) {
+    return api.delete<void>(`/scans/${id}`).then((r) => r.data)
+  },
+
   getStats() {
     return api.get<ScanStats>('/scans/stats').then((r) => r.data)
   },
