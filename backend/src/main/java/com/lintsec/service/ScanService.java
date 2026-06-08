@@ -48,6 +48,7 @@ public class ScanService {
     private final ScanFindingMapper mapper;
     private final ApplicationEventPublisher events;
     private final FormLoginAuthenticator authenticator;
+    private final ScanCancellationRegistry cancellationRegistry;
 
     public ScanService(
             ScanRepository scanRepository,
@@ -57,7 +58,8 @@ public class ScanService {
            Scanner scanner,
            ScanFindingMapper mapper,
             ApplicationEventPublisher events,
-            FormLoginAuthenticator authenticator
+            FormLoginAuthenticator authenticator,
+            ScanCancellationRegistry cancellationRegistry
     ) {
         this.scanRepository = scanRepository;
         this.scanPageRepository = scanPageRepository;
@@ -67,6 +69,7 @@ public class ScanService {
         this.mapper = mapper;
         this.events = events;
         this.authenticator = authenticator;
+        this.cancellationRegistry = cancellationRegistry;
     }
 
     @Async
@@ -85,6 +88,8 @@ public class ScanService {
         if (!scan.isOwnershipConfirmed()) throw new IllegalStateException("ownership not confirmed");
         if (scan.getStatus() != ScanStatus.PENDING) throw new IllegalStateException("only pending scan can be ran");
 
+        CancellationToken token = () -> cancellationRegistry.isRequested(scanId);
+
         scan.setStatus(ScanStatus.RUNNING);
         scan.setStartedAt(Instant.now());
         scanRepository.save(scan);
@@ -92,6 +97,11 @@ public class ScanService {
                 0, 0, null));
 
         try {
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, 0, 0);
+                return;
+            }
+
             AuthSession authSession = AuthSession.anonymous();
             if (loginConfig != null) {
                 authSession = authenticator.authenticate(loginConfig);  // throws AuthenticationException on failure
@@ -110,7 +120,7 @@ public class ScanService {
             );
             ScanContext scanContext = new ScanContext(
                     crawlConfig.userAgent(), crawlConfig.timeoutMs(), true, crawlConfig.authSession());
-            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl(), CancellationToken.NONE);
+            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl(), token);
             List<ScanPage> scanPages = result.visitedUrls().stream().map(url -> {
                 ScanPage scanPage = new ScanPage();
                 scanPage.setScan(scan);
@@ -124,9 +134,20 @@ public class ScanService {
             scan.setPagesCrawled(result.visitedUrls().size());
             events.publishEvent(new ScanEvent(scanId, ScanEvent.EventType.CRAWL_COMPLETE,
                     result.visitedUrls().size(), 0, null));
-            List<ScanFinding> raw = scanner.scan(result, scanContext, CancellationToken.NONE);
+
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, result.visitedUrls().size(), 0);
+                return;
+            }
+
+            List<ScanFinding> raw = scanner.scan(result, scanContext, token);
             List<Finding> findings = raw.stream().map(sf -> mapper.toEntity(sf, scan)).toList();
             findingRepository.saveAll(findings);
+
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, result.visitedUrls().size(), findings.size());
+                return;
+            }
 
             scan.setStatus(ScanStatus.COMPLETE);
             scan.setCompletedAt(Instant.now());
@@ -143,7 +164,18 @@ public class ScanService {
                     scan.getPagesCrawled(),    // partial value if we got that far
                     0,                          // findings list never built on failure path
                     e.getMessage()));
+        } finally {
+            cancellationRegistry.clear(scanId);
         }
+    }
+
+    private void finalizeCancelled(Scan scan, int pagesCrawled, int findingsCount) {
+        scan.setStatus(ScanStatus.CANCELLED);
+        scan.setCancelRequested(false);
+        scan.setCompletedAt(Instant.now());
+        scanRepository.save(scan);
+        events.publishEvent(new ScanEvent(scan.getId(), ScanEvent.EventType.CANCELLED,
+                pagesCrawled, findingsCount, null));
     }
 
     public Scan createScan(Long userId, ScanCreateRequest req) {
