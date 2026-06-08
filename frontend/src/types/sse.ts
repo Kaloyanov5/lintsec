@@ -1,4 +1,4 @@
-export type ScanEventType = 'STARTED' | 'CRAWL_COMPLETE' | 'SCAN_COMPLETE' | 'FAILED'
+export type ScanEventType = 'STARTED' | 'CRAWL_COMPLETE' | 'SCAN_COMPLETE' | 'FAILED' | 'CANCELLED'
 
 /** Mirrors the backend `ScanEvent` record, sent as the named SSE event `scan`. */
 export type ScanEvent = {

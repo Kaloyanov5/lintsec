@@ -1,6 +1,6 @@
 import type { Severity } from './finding'
 
-export type ScanStatus = 'PENDING' | 'RUNNING' | 'COMPLETE' | 'FAILED'
+export type ScanStatus = 'PENDING' | 'RUNNING' | 'COMPLETE' | 'FAILED' | 'CANCELLED'
 
 /**
  * Mirrors the backend `ScanResponse` returned by `GET /api/scans/{id}` and `GET /api/scans`.
@@ -15,6 +15,7 @@ export type Scan = {
   requestDelayMs: number
   pagesCrawled: number
   authenticated: boolean
+  cancelRequested: boolean
   errorMessage: string | null
   startedAt: string | null
   completedAt: string | null

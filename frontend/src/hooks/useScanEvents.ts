@@ -3,7 +3,7 @@ import { scanService } from '@/services/scanService'
 import type { ScanEvent, ScanEventType } from '@/types'
 
 function isTerminal(type: ScanEventType): boolean {
-  return type === 'SCAN_COMPLETE' || type === 'FAILED'
+  return type === 'SCAN_COMPLETE' || type === 'FAILED' || type === 'CANCELLED'
 }
 
 /**
