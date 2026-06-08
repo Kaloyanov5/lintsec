@@ -14,6 +14,7 @@ import com.lintsec.domain.ScanStatus;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanEvent;
 import com.lintsec.dto.ScanStatsResponse;
+import com.lintsec.exception.ConflictException;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.FindingRepository;
 import com.lintsec.repository.ScanPageRepository;
@@ -188,6 +189,19 @@ public class ScanService {
         scan.setRequestDelayMs(req.requestDelayMs());
         scan.setIgnoreRobots(req.ignoreRobots());
         // status defaults to PENDING via entity initializer
+        return scanRepository.save(scan);
+    }
+
+    public Scan cancelScan(Long userId, Long scanId) {
+        Scan scan = scanRepository.findByIdAndUserId(scanId, userId)
+                .orElseThrow(() -> new NotFoundException("scan not found"));
+
+        if (scan.getStatus() != ScanStatus.PENDING && scan.getStatus() != ScanStatus.RUNNING)
+            throw new ConflictException("scan is not running");
+
+        cancellationRegistry.request(scanId);
+        scan.setCancelRequested(true);
+
         return scanRepository.save(scan);
     }
 
