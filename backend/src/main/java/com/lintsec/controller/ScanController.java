@@ -102,6 +102,24 @@ public class ScanController {
         return ScanResponse.from(scan);
     }
 
+    @PostMapping("/{id}/cancel")
+    public ScanResponse cancel(
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        Scan scan = scanService.cancelScan(principal.id(), id);
+        return ScanResponse.from(scan);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        scanService.deleteScan(principal.id(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/findings")
     public List<FindingResponse> findings(
             @AuthenticationPrincipal AppUserPrincipal principal,
