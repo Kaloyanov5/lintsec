@@ -60,6 +60,8 @@ public class SseEmitterRegistry {
     }
 
     private static boolean isTerminal(ScanEvent.EventType type) {
-        return type == ScanEvent.EventType.SCAN_COMPLETE || type == ScanEvent.EventType.FAILED;
+        return type == ScanEvent.EventType.SCAN_COMPLETE
+                || type == ScanEvent.EventType.FAILED
+                || type == ScanEvent.EventType.CANCELLED;
     }
 }
