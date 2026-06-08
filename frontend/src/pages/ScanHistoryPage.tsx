@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -14,23 +14,17 @@ export default function ScanHistoryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
-    scanService
+  const load = useCallback(() => {
+    return scanService
       .listScans()
-      .then((page) => {
-        if (active) setScans(page.content)
-      })
-      .catch((err) => {
-        if (active) setError(parseProblem(err).message)
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
+      .then((page) => setScans(page.content))
+      .catch((err) => setError(parseProblem(err).message))
+      .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -63,7 +57,7 @@ export default function ScanHistoryPage() {
       ) : (
         <div className="mt-6 space-y-2">
           {scans.map((scan) => (
-            <ScanListItem key={scan.id} scan={scan} />
+            <ScanListItem key={scan.id} scan={scan} onChanged={load} />
           ))}
         </div>
       )}

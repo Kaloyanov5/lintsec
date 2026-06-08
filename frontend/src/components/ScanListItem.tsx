@@ -1,14 +1,12 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { RotateCw, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import type { Scan, ScanStatus } from '@/types'
-
-const STATUS_BADGE: Record<ScanStatus, string> = {
-  PENDING: 'bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300',
-  RUNNING: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
-  COMPLETE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-  FAILED: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
-  CANCELLED: 'bg-slate-100 text-slate-500 dark:bg-slate-500/15 dark:text-slate-400',
-}
+import { parseProblem } from '@/lib/problem'
+import { scanService } from '@/services/scanService'
+import { isCanceling, isTerminalStatus, statusBadgeClass, statusLabel } from '@/lib/scanStatus'
+import type { Scan } from '@/types'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -17,25 +15,106 @@ function formatDate(iso: string): string {
   })
 }
 
-/** One scan row linking to its results page. Shared by the History and Dashboard pages. */
-export function ScanListItem({ scan }: { scan: Scan }) {
+/**
+ * One scan row linking to its results page. Shared by the History and Dashboard pages.
+ * When `onChanged` is provided, lifecycle actions (cancel/re-run/delete) are shown and
+ * call `onChanged` after a successful mutation so the parent can refresh.
+ */
+export function ScanListItem({ scan, onChanged }: { scan: Scan; onChanged?: () => void }) {
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+
+  const canceling = isCanceling(scan)
+  const terminal = isTerminalStatus(scan.status)
+
+  async function onCancel() {
+    setBusy(true)
+    try {
+      await scanService.cancelScan(scan.id)
+      toast.success('Cancellation requested.')
+      onChanged?.()
+    } catch (err) {
+      toast.error(parseProblem(err).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onDelete() {
+    if (!window.confirm('Delete this scan and all its findings? This cannot be undone.')) return
+    setBusy(true)
+    try {
+      await scanService.deleteScan(scan.id)
+      toast.success('Scan deleted.')
+      onChanged?.()
+    } catch (err) {
+      toast.error(parseProblem(err).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function onRerun() {
+    navigate('/scans/new', { state: { from: scan } })
+  }
+
   return (
-    <Link
-      to={`/scans/${scan.id}`}
-      className="flex items-center gap-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 transition-colors hover:bg-[color:var(--color-surface-muted)]"
-    >
-      <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-medium', STATUS_BADGE[scan.status])}>
-        {scan.status}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-mono text-sm text-[color:var(--color-foreground)]">
-          {scan.targetUrl}
+    <div className="flex items-center gap-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 transition-colors hover:bg-[color:var(--color-surface-muted)]">
+      <Link to={`/scans/${scan.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+        <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-medium', statusBadgeClass(scan))}>
+          {statusLabel(scan)}
         </span>
-        <span className="block text-xs text-[color:var(--color-muted)]">
-          {scan.pagesCrawled} pages · {formatDate(scan.createdAt)}
-          {scan.authenticated && ' · Authenticated'}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-mono text-sm text-[color:var(--color-foreground)]">
+            {scan.targetUrl}
+          </span>
+          <span className="block text-xs text-[color:var(--color-muted)]">
+            {scan.pagesCrawled} pages · {formatDate(scan.createdAt)}
+            {scan.authenticated && ' · Authenticated'}
+          </span>
         </span>
-      </span>
-    </Link>
+      </Link>
+
+      {onChanged && (
+        <div className="flex shrink-0 items-center gap-1">
+          {scan.status === 'RUNNING' && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={busy || canceling}
+              title={canceling ? 'Canceling…' : 'Cancel scan'}
+              className="rounded-md p-1.5 text-[color:var(--color-muted)] transition-colors hover:bg-[color:var(--color-surface-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-50"
+            >
+              <X size={16} aria-hidden="true" />
+              <span className="sr-only">Cancel scan</span>
+            </button>
+          )}
+          {terminal && (
+            <button
+              type="button"
+              onClick={onRerun}
+              disabled={busy}
+              title="Re-run scan"
+              className="rounded-md p-1.5 text-[color:var(--color-muted)] transition-colors hover:bg-[color:var(--color-surface-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-50"
+            >
+              <RotateCw size={16} aria-hidden="true" />
+              <span className="sr-only">Re-run scan</span>
+            </button>
+          )}
+          {terminal && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={busy}
+              title="Delete scan"
+              className="rounded-md p-1.5 text-[color:var(--color-muted)] transition-colors hover:bg-[color:var(--color-surface-muted)] hover:text-[color:var(--color-danger)] disabled:opacity-50"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              <span className="sr-only">Delete scan</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
