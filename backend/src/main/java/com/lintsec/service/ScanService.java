@@ -1,6 +1,7 @@
 package com.lintsec.service;
 
 import com.lintsec.crawler.AuthSession;
+import com.lintsec.crawler.CancellationToken;
 import com.lintsec.crawler.CrawlConfig;
 import com.lintsec.crawler.CrawlResult;
 import com.lintsec.crawler.Crawler;
@@ -109,7 +110,7 @@ public class ScanService {
             );
             ScanContext scanContext = new ScanContext(
                     crawlConfig.userAgent(), crawlConfig.timeoutMs(), true, crawlConfig.authSession());
-            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl());
+            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl(), CancellationToken.NONE);
             List<ScanPage> scanPages = result.visitedUrls().stream().map(url -> {
                 ScanPage scanPage = new ScanPage();
                 scanPage.setScan(scan);
