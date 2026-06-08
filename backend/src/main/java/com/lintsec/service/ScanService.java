@@ -205,6 +205,21 @@ public class ScanService {
         return scanRepository.save(scan);
     }
 
+    @Transactional
+    public void deleteScan(Long userId, Long scanId) {
+        Scan scan = scanRepository.findByIdAndUserId(scanId, userId)
+                .orElseThrow(() -> new NotFoundException("scan not found"));
+
+        ScanStatus status = scan.getStatus();
+        if (status == ScanStatus.PENDING || status == ScanStatus.RUNNING) {
+            throw new ConflictException("cannot delete a running scan; cancel it first");
+        }
+
+        findingRepository.deleteByScanId(scanId);
+        scanPageRepository.deleteByScanId(scanId);
+        scanRepository.delete(scan);
+    }
+
     @Transactional(readOnly = true)
     public ScanStatsResponse getStats(Long userId) {
         long totalScans = scanRepository.countByUserId(userId);

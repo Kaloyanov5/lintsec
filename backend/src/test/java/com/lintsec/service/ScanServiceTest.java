@@ -5,8 +5,11 @@ import com.lintsec.domain.ScanStatus;
 import com.lintsec.exception.ConflictException;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.ScanRepository;
+import com.lintsec.repository.FindingRepository;
+import com.lintsec.repository.ScanPageRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +19,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +29,8 @@ class ScanServiceTest {
 
     @Mock ScanRepository scanRepository;
     @Mock ScanCancellationRegistry cancellationRegistry;
+    @Mock FindingRepository findingRepository;
+    @Mock ScanPageRepository scanPageRepository;
     @InjectMocks ScanService scanService;
 
     private static Scan scanWithStatus(Long id, ScanStatus status) {
@@ -73,5 +79,27 @@ class ScanServiceTest {
         when(scanRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> scanService.cancelScan(1L, 99L));
+    }
+
+    @Test
+    void deleteTerminalScanCascades() {
+        Scan scan = scanWithStatus(11L, ScanStatus.COMPLETE);
+        when(scanRepository.findByIdAndUserId(11L, 1L)).thenReturn(Optional.of(scan));
+
+        scanService.deleteScan(1L, 11L);
+
+        InOrder order = inOrder(findingRepository, scanPageRepository, scanRepository);
+        order.verify(findingRepository).deleteByScanId(11L);
+        order.verify(scanPageRepository).deleteByScanId(11L);
+        order.verify(scanRepository).delete(scan);
+    }
+
+    @Test
+    void deleteRunningScanIsConflict() {
+        Scan scan = scanWithStatus(12L, ScanStatus.RUNNING);
+        when(scanRepository.findByIdAndUserId(12L, 1L)).thenReturn(Optional.of(scan));
+
+        assertThrows(ConflictException.class, () -> scanService.deleteScan(1L, 12L));
+        verify(scanRepository, never()).delete(any());
     }
 }
