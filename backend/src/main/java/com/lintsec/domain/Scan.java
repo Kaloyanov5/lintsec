@@ -71,6 +71,9 @@ public class Scan {
     @Column(name = "authenticated", nullable = false)
     private boolean authenticated = false;
 
+    @Column(name = "cancel_requested", nullable = false)
+    private boolean cancelRequested = false;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
