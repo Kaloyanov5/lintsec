@@ -124,7 +124,7 @@ public class ScanService {
             scan.setPagesCrawled(result.visitedUrls().size());
             events.publishEvent(new ScanEvent(scanId, ScanEvent.EventType.CRAWL_COMPLETE,
                     result.visitedUrls().size(), 0, null));
-            List<ScanFinding> raw = scanner.scan(result, scanContext);
+            List<ScanFinding> raw = scanner.scan(result, scanContext, CancellationToken.NONE);
             List<Finding> findings = raw.stream().map(sf -> mapper.toEntity(sf, scan)).toList();
             findingRepository.saveAll(findings);
 

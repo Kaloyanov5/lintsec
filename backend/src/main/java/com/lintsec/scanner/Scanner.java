@@ -1,5 +1,6 @@
 package com.lintsec.scanner;
 
+import com.lintsec.crawler.CancellationToken;
 import com.lintsec.crawler.CrawlResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,7 @@ public class Scanner {
         this.modules = List.copyOf(modules);
     }
 
-    public List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context) {
+    public List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context, CancellationToken cancellationToken) {
         log.info("starting scan: modules={} urls={} forms={}",
                 this.modules.size(),
                 crawlResult.visitedUrls().size(),
@@ -28,6 +29,11 @@ public class Scanner {
         int errorCount = 0;
 
         for (ScannerModule module : this.modules) {
+            if (cancellationToken.isCancellationRequested()) {
+                log.info("scan cancelled before module={}; returning {} partial findings",
+                        module.name(), findings.size());
+                break;
+            }
             try {
                 List<ScanFinding> moduleFindings = module.scan(crawlResult, context);
                 findings.addAll(moduleFindings);
