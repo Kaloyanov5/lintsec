@@ -59,3 +59,8 @@ export type TwoFactorConfirmRequest = {
 export type TwoFactorDisableRequest = {
   password: string
 }
+
+export type ChangePasswordRequest = {
+  currentPassword: string
+  newPassword: string
+}
