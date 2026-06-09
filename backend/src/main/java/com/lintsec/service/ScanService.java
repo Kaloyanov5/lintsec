@@ -1,6 +1,7 @@
 package com.lintsec.service;
 
 import com.lintsec.crawler.AuthSession;
+import com.lintsec.crawler.CancellationToken;
 import com.lintsec.crawler.CrawlConfig;
 import com.lintsec.crawler.CrawlResult;
 import com.lintsec.crawler.Crawler;
@@ -13,6 +14,7 @@ import com.lintsec.domain.ScanStatus;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanEvent;
 import com.lintsec.dto.ScanStatsResponse;
+import com.lintsec.exception.ConflictException;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.FindingRepository;
 import com.lintsec.repository.ScanPageRepository;
@@ -47,6 +49,7 @@ public class ScanService {
     private final ScanFindingMapper mapper;
     private final ApplicationEventPublisher events;
     private final FormLoginAuthenticator authenticator;
+    private final ScanCancellationRegistry cancellationRegistry;
 
     public ScanService(
             ScanRepository scanRepository,
@@ -56,7 +59,8 @@ public class ScanService {
            Scanner scanner,
            ScanFindingMapper mapper,
             ApplicationEventPublisher events,
-            FormLoginAuthenticator authenticator
+            FormLoginAuthenticator authenticator,
+            ScanCancellationRegistry cancellationRegistry
     ) {
         this.scanRepository = scanRepository;
         this.scanPageRepository = scanPageRepository;
@@ -66,6 +70,7 @@ public class ScanService {
         this.mapper = mapper;
         this.events = events;
         this.authenticator = authenticator;
+        this.cancellationRegistry = cancellationRegistry;
     }
 
     @Async
@@ -84,6 +89,8 @@ public class ScanService {
         if (!scan.isOwnershipConfirmed()) throw new IllegalStateException("ownership not confirmed");
         if (scan.getStatus() != ScanStatus.PENDING) throw new IllegalStateException("only pending scan can be ran");
 
+        CancellationToken token = () -> cancellationRegistry.isRequested(scanId);
+
         scan.setStatus(ScanStatus.RUNNING);
         scan.setStartedAt(Instant.now());
         scanRepository.save(scan);
@@ -91,6 +98,11 @@ public class ScanService {
                 0, 0, null));
 
         try {
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, 0, 0);
+                return;
+            }
+
             AuthSession authSession = AuthSession.anonymous();
             if (loginConfig != null) {
                 authSession = authenticator.authenticate(loginConfig);  // throws AuthenticationException on failure
@@ -109,7 +121,7 @@ public class ScanService {
             );
             ScanContext scanContext = new ScanContext(
                     crawlConfig.userAgent(), crawlConfig.timeoutMs(), true, crawlConfig.authSession());
-            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl());
+            CrawlResult result = new Crawler(crawlConfig).crawl(scan.getTargetUrl(), token);
             List<ScanPage> scanPages = result.visitedUrls().stream().map(url -> {
                 ScanPage scanPage = new ScanPage();
                 scanPage.setScan(scan);
@@ -123,9 +135,20 @@ public class ScanService {
             scan.setPagesCrawled(result.visitedUrls().size());
             events.publishEvent(new ScanEvent(scanId, ScanEvent.EventType.CRAWL_COMPLETE,
                     result.visitedUrls().size(), 0, null));
-            List<ScanFinding> raw = scanner.scan(result, scanContext);
+
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, result.visitedUrls().size(), 0);
+                return;
+            }
+
+            List<ScanFinding> raw = scanner.scan(result, scanContext, token);
             List<Finding> findings = raw.stream().map(sf -> mapper.toEntity(sf, scan)).toList();
             findingRepository.saveAll(findings);
+
+            if (token.isCancellationRequested()) {
+                finalizeCancelled(scan, result.visitedUrls().size(), findings.size());
+                return;
+            }
 
             scan.setStatus(ScanStatus.COMPLETE);
             scan.setCompletedAt(Instant.now());
@@ -142,7 +165,18 @@ public class ScanService {
                     scan.getPagesCrawled(),    // partial value if we got that far
                     0,                          // findings list never built on failure path
                     e.getMessage()));
+        } finally {
+            cancellationRegistry.clear(scanId);
         }
+    }
+
+    private void finalizeCancelled(Scan scan, int pagesCrawled, int findingsCount) {
+        scan.setStatus(ScanStatus.CANCELLED);
+        scan.setCancelRequested(false);
+        scan.setCompletedAt(Instant.now());
+        scanRepository.save(scan);
+        events.publishEvent(new ScanEvent(scan.getId(), ScanEvent.EventType.CANCELLED,
+                pagesCrawled, findingsCount, null));
     }
 
     public Scan createScan(Long userId, ScanCreateRequest req) {
@@ -156,6 +190,34 @@ public class ScanService {
         scan.setIgnoreRobots(req.ignoreRobots());
         // status defaults to PENDING via entity initializer
         return scanRepository.save(scan);
+    }
+
+    public Scan cancelScan(Long userId, Long scanId) {
+        Scan scan = scanRepository.findByIdAndUserId(scanId, userId)
+                .orElseThrow(() -> new NotFoundException("scan not found"));
+
+        if (scan.getStatus() != ScanStatus.PENDING && scan.getStatus() != ScanStatus.RUNNING)
+            throw new ConflictException("scan is not running");
+
+        cancellationRegistry.request(scanId);
+        scan.setCancelRequested(true);
+
+        return scanRepository.save(scan);
+    }
+
+    @Transactional
+    public void deleteScan(Long userId, Long scanId) {
+        Scan scan = scanRepository.findByIdAndUserId(scanId, userId)
+                .orElseThrow(() -> new NotFoundException("scan not found"));
+
+        ScanStatus status = scan.getStatus();
+        if (status == ScanStatus.PENDING || status == ScanStatus.RUNNING) {
+            throw new ConflictException("cannot delete a running scan; cancel it first");
+        }
+
+        findingRepository.deleteByScanId(scanId);
+        scanPageRepository.deleteByScanId(scanId);
+        scanRepository.delete(scan);
     }
 
     @Transactional(readOnly = true)

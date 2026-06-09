@@ -1,5 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +10,7 @@ import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { parseProblem } from '@/lib/problem'
 import { scanService } from '@/services/scanService'
+import type { Scan } from '@/types'
 
 const authSchema = z
   .object({
@@ -42,27 +43,31 @@ type ScanFormValues = z.infer<typeof schema>
 
 export default function NewScanPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: Scan } | null)?.from ?? null
+
+  const defaultValues: ScanFormValues = {
+    targetUrl: from?.targetUrl ?? '',
+    maxDepth: from?.maxDepth ?? 2,
+    maxPages: from?.maxPages ?? 50,
+    requestDelayMs: from?.requestDelayMs ?? 300,
+    ownershipConfirmed: false,
+    ignoreRobots: false,
+    authEnabled: from?.authenticated ?? false,
+    auth: {
+      loginUrl: '',
+      usernameField: 'username',
+      passwordField: 'password',
+      username: '',
+      password: '',
+      successCheck: '',
+      sessionCookie: '',
+    },
+  }
 
   const form = useForm<ScanFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      targetUrl: '',
-      maxDepth: 2,
-      maxPages: 50,
-      requestDelayMs: 300,
-      ownershipConfirmed: false,
-      ignoreRobots: false,
-      authEnabled: false,
-      auth: {
-        loginUrl: '',
-        usernameField: 'username',
-        passwordField: 'password',
-        username: '',
-        password: '',
-        successCheck: '',
-        sessionCookie: '',
-      },
-    },
+    defaultValues,
   })
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -99,6 +104,13 @@ export default function NewScanPage() {
       <p className="mt-1 text-sm text-[color:var(--color-muted)]">
         Only scan targets you own or are explicitly authorized to test.
       </p>
+
+      {from && (
+        <p className="mt-2 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-3 text-xs text-[color:var(--color-muted)]">
+          Re-running a previous scan. Review the settings and re-confirm authorization
+          {from.authenticated ? '. Re-enter your login credentials to scan behind login.' : '.'}
+        </p>
+      )}
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5" noValidate>
         <FormField label="Target URL" error={errors.targetUrl?.message}>

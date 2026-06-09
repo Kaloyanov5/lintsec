@@ -11,6 +11,7 @@ public record ScanEvent(
         STARTED,
         CRAWL_COMPLETE,
         SCAN_COMPLETE,
-        FAILED
+        FAILED,
+        CANCELLED
     }
 }

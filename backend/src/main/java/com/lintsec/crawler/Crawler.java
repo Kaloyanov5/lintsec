@@ -24,7 +24,7 @@ public class Crawler {
         this.fetcher = new PageFetcher(config);
     }
 
-    public CrawlResult crawl(String startUrl) {
+    public CrawlResult crawl(String startUrl, CancellationToken cancellationToken) {
         UrlScope scope = new UrlScope(startUrl);
         RobotsTxt robots = config.ignoreRobots()
                 ? RobotsTxt.allowAll()
@@ -40,6 +40,10 @@ public class Crawler {
         Set<String> failedUrls = new HashSet<>();
 
         while (!queue.isEmpty() && visitedUrls.size() < config.maxPages()) {
+            if (cancellationToken.isCancellationRequested()) {
+                log.info("crawl cancelled after {} pages", visitedUrls.size());
+                break;
+            }
             QueueEntry entry = queue.poll();
             String url = entry.url();
             int depth = entry.depth();

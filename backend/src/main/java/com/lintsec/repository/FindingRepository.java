@@ -3,7 +3,9 @@ package com.lintsec.repository;
 import com.lintsec.domain.Finding;
 import com.lintsec.domain.Severity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +22,9 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
 
     @Query("select f.severity, count(f) from Finding f where f.scan.user.id = :userId group by f.severity")
     List<Object[]> countBySeverityForUser(@Param("userId") Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("delete from Finding f where f.scan.id = :scanId")
+    void deleteByScanId(@Param("scanId") Long scanId);
 }
