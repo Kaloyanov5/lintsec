@@ -196,6 +196,17 @@ public class AuthService {
         userService.setTwoFactor(userId, false);
     }
 
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userService.getById(userId);
+        if (user.getProvider() != AuthProvider.LOCAL) {
+            throw new BadRequestException("password change is only available for local accounts");
+        }
+        if (!userService.checkPassword(user, currentPassword)) {
+            throw new UnauthorizedException("wrong password");
+        }
+        userService.updatePassword(userId, newPassword);
+    }
+
     public void logout(HttpServletRequest request, HttpServletResponse response) {
         HttpSession session = request.getSession(false);
         if (session != null) {

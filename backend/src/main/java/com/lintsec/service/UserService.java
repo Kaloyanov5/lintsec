@@ -78,6 +78,12 @@ public class UserService {
         u.setTwoFactorEnabled(enabled);
     }
 
+    @Transactional
+    public void updatePassword(Long userId, String rawPassword) {
+        User u = getById(userId);
+        u.setPasswordHash(passwordEncoder.encode(rawPassword));
+    }
+
     public boolean checkPassword(User user, String rawPassword) {
         if (user.getPasswordHash() == null) {
             return false;
