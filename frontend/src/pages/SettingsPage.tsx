@@ -1,6 +1,11 @@
 import { AccountCard } from '@/components/settings/AccountCard'
+import { PasswordCard } from '@/components/settings/PasswordCard'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SettingsPage() {
+  const { user } = useAuth()
+  const isLocal = user?.provider === 'LOCAL'
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="text-2xl font-medium">Settings</h1>
@@ -10,6 +15,7 @@ export default function SettingsPage() {
 
       <div className="mt-8 flex flex-col gap-4">
         <AccountCard />
+        {isLocal ? <PasswordCard /> : null}
       </div>
     </main>
   )
