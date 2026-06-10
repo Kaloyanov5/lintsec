@@ -1,7 +1,10 @@
 package com.lintsec.service;
 
+import com.lintsec.config.ScanProperties;
 import com.lintsec.domain.Scan;
 import com.lintsec.domain.ScanStatus;
+import com.lintsec.dto.ScanCreateRequest;
+import com.lintsec.exception.BadRequestException;
 import com.lintsec.exception.ConflictException;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.ScanRepository;
@@ -19,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,7 +35,12 @@ class ScanServiceTest {
     @Mock ScanCancellationRegistry cancellationRegistry;
     @Mock FindingRepository findingRepository;
     @Mock ScanPageRepository scanPageRepository;
+    @Mock ScanProperties scanProperties;
     @InjectMocks ScanService scanService;
+
+    private static ScanCreateRequest createRequest(String targetUrl) {
+        return new ScanCreateRequest(targetUrl, 1, 10, 0, true, false, null);
+    }
 
     private static Scan scanWithStatus(Long id, ScanStatus status) {
         Scan scan = new Scan();
@@ -101,5 +110,23 @@ class ScanServiceTest {
 
         assertThrows(ConflictException.class, () -> scanService.deleteScan(1L, 12L));
         verify(scanRepository, never()).delete(any());
+    }
+
+    @Test
+    void createScanRejectsInternalTarget() {
+        // SSRF guard: a loopback/link-local target must never be accepted, even with ownership confirmed.
+        assertThrows(BadRequestException.class,
+                () -> scanService.createScan(1L, createRequest("http://169.254.169.254/latest/meta-data/")));
+        verify(scanRepository, never()).save(any());
+    }
+
+    @Test
+    void createScanRejectsWhenAtConcurrentLimit() {
+        when(scanProperties.maxConcurrentPerUser()).thenReturn(3);
+        when(scanRepository.countByUserIdAndStatusIn(eq(1L), any())).thenReturn(3L);
+
+        assertThrows(ConflictException.class,
+                () -> scanService.createScan(1L, createRequest("http://8.8.8.8/")));
+        verify(scanRepository, never()).save(any());
     }
 }

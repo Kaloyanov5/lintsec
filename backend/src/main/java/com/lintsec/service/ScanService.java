@@ -7,6 +7,7 @@ import com.lintsec.crawler.CrawlResult;
 import com.lintsec.crawler.Crawler;
 import com.lintsec.crawler.FormLoginAuthenticator;
 import com.lintsec.crawler.LoginConfig;
+import com.lintsec.crawler.TargetGuard;
 import com.lintsec.domain.Finding;
 import com.lintsec.domain.Scan;
 import com.lintsec.domain.ScanPage;
@@ -14,12 +15,14 @@ import com.lintsec.domain.ScanStatus;
 import com.lintsec.dto.ScanCreateRequest;
 import com.lintsec.dto.ScanEvent;
 import com.lintsec.dto.ScanStatsResponse;
+import com.lintsec.exception.BadRequestException;
 import com.lintsec.exception.ConflictException;
 import com.lintsec.exception.NotFoundException;
 import com.lintsec.repository.FindingRepository;
 import com.lintsec.repository.ScanPageRepository;
 import com.lintsec.repository.ScanRepository;
 import com.lintsec.repository.UserRepository;
+import com.lintsec.config.ScanProperties;
 import com.lintsec.scanner.ScanContext;
 import com.lintsec.scanner.ScanFinding;
 import com.lintsec.scanner.ScanFindingMapper;
@@ -31,6 +34,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +54,7 @@ public class ScanService {
     private final ApplicationEventPublisher events;
     private final FormLoginAuthenticator authenticator;
     private final ScanCancellationRegistry cancellationRegistry;
+    private final ScanProperties scanProperties;
 
     public ScanService(
             ScanRepository scanRepository,
@@ -60,7 +65,8 @@ public class ScanService {
            ScanFindingMapper mapper,
             ApplicationEventPublisher events,
             FormLoginAuthenticator authenticator,
-            ScanCancellationRegistry cancellationRegistry
+            ScanCancellationRegistry cancellationRegistry,
+            ScanProperties scanProperties
     ) {
         this.scanRepository = scanRepository;
         this.scanPageRepository = scanPageRepository;
@@ -71,9 +77,10 @@ public class ScanService {
         this.events = events;
         this.authenticator = authenticator;
         this.cancellationRegistry = cancellationRegistry;
+        this.scanProperties = scanProperties;
     }
 
-    @Async
+    @Async("scanExecutor")
     public void runScanAsync(Long scanId, LoginConfig loginConfig) {
         try {
             runScan(scanId, loginConfig);
@@ -89,7 +96,10 @@ public class ScanService {
         if (!scan.isOwnershipConfirmed()) throw new IllegalStateException("ownership not confirmed");
         if (scan.getStatus() != ScanStatus.PENDING) throw new IllegalStateException("only pending scan can be ran");
 
-        CancellationToken token = () -> cancellationRegistry.isRequested(scanId);
+        // The token stops the scan on explicit cancel OR when the wall-clock deadline passes, so
+        // the deadline is observed everywhere the loops already poll for cancellation.
+        Instant deadline = Instant.now().plus(Duration.ofMinutes(scanProperties.maxDurationMinutes()));
+        CancellationToken token = () -> cancellationRegistry.isRequested(scanId) || Instant.now().isAfter(deadline);
 
         scan.setStatus(ScanStatus.RUNNING);
         scan.setStartedAt(Instant.now());
@@ -99,7 +109,7 @@ public class ScanService {
 
         try {
             if (token.isCancellationRequested()) {
-                finalizeCancelled(scan, 0, 0);
+                finalizeStopped(scan, 0, 0);
                 return;
             }
 
@@ -137,7 +147,7 @@ public class ScanService {
                     result.visitedUrls().size(), 0, null));
 
             if (token.isCancellationRequested()) {
-                finalizeCancelled(scan, result.visitedUrls().size(), 0);
+                finalizeStopped(scan, result.visitedUrls().size(), 0);
                 return;
             }
 
@@ -146,7 +156,7 @@ public class ScanService {
             findingRepository.saveAll(findings);
 
             if (token.isCancellationRequested()) {
-                finalizeCancelled(scan, result.visitedUrls().size(), findings.size());
+                finalizeStopped(scan, result.visitedUrls().size(), findings.size());
                 return;
             }
 
@@ -170,16 +180,49 @@ public class ScanService {
         }
     }
 
-    private void finalizeCancelled(Scan scan, int pagesCrawled, int findingsCount) {
-        scan.setStatus(ScanStatus.CANCELLED);
-        scan.setCancelRequested(false);
+    /**
+     * Terminates a scan that the token stopped early. Distinguishes a user cancellation (→ CANCELLED)
+     * from a wall-clock-deadline trip (→ FAILED with a timeout message), since the token fires for both.
+     */
+    private void finalizeStopped(Scan scan, int pagesCrawled, int findingsCount) {
         scan.setCompletedAt(Instant.now());
-        scanRepository.save(scan);
-        events.publishEvent(new ScanEvent(scan.getId(), ScanEvent.EventType.CANCELLED,
-                pagesCrawled, findingsCount, null));
+        if (cancellationRegistry.isRequested(scan.getId())) {
+            scan.setStatus(ScanStatus.CANCELLED);
+            scan.setCancelRequested(false);
+            scanRepository.save(scan);
+            events.publishEvent(new ScanEvent(scan.getId(), ScanEvent.EventType.CANCELLED,
+                    pagesCrawled, findingsCount, null));
+        } else {
+            String message = "scan exceeded the maximum duration of "
+                    + scanProperties.maxDurationMinutes() + " minutes";
+            scan.setStatus(ScanStatus.FAILED);
+            scan.setErrorMessage(message);
+            scanRepository.save(scan);
+            events.publishEvent(new ScanEvent(scan.getId(), ScanEvent.EventType.FAILED,
+                    pagesCrawled, findingsCount, message));
+        }
     }
 
     public Scan createScan(Long userId, ScanCreateRequest req) {
+        if (!TargetGuard.isAllowed(req.targetUrl())) {
+            throw new BadRequestException(
+                    "target URL is not permitted: internal, loopback, and link-local addresses cannot be scanned");
+        }
+        ScanCreateRequest.AuthConfig auth = req.auth();
+        if (auth != null && auth.loginUrl() != null && !auth.loginUrl().isBlank()
+                && !TargetGuard.isAllowed(auth.loginUrl())) {
+            throw new BadRequestException(
+                    "login URL is not permitted: internal, loopback, and link-local addresses cannot be scanned");
+        }
+
+        long active = scanRepository.countByUserIdAndStatusIn(
+                userId, List.of(ScanStatus.PENDING, ScanStatus.RUNNING));
+        if (active >= scanProperties.maxConcurrentPerUser()) {
+            throw new ConflictException(
+                    "you already have " + active + " active scans (max "
+                            + scanProperties.maxConcurrentPerUser() + "); wait for one to finish");
+        }
+
         Scan scan = new Scan();
         scan.setUser(userRepository.getReferenceById(userId));   // lazy FK ref, no SELECT
         scan.setTargetUrl(req.targetUrl());

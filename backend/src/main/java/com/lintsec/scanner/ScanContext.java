@@ -1,6 +1,7 @@
 package com.lintsec.scanner;
 
 import com.lintsec.crawler.AuthSession;
+import com.lintsec.crawler.HttpLimits;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 
@@ -24,7 +25,8 @@ public record ScanContext(
     public Connection openConnection(String url) {
         Connection connection = Jsoup.connect(url)
                 .userAgent(userAgent)
-                .timeout(timeoutMs);
+                .timeout(timeoutMs)
+                .maxBodySize(HttpLimits.MAX_RESPONSE_BYTES);
         authSession.applyTo(connection);
         return connection;
     }

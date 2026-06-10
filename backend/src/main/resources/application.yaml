@@ -5,6 +5,10 @@ spring:
     name: LintSec
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  data:
+    web:
+      pageable:
+        max-page-size: 100   # cap client-supplied ?size= so a scan list page can't request 100000 rows
 
 server:
   port: ${SERVER_PORT:8080}
@@ -35,6 +39,7 @@ lintsec:
     user-agent: "LintSec-Scanner/0.1 (+https://lintsec.local)"
   scan:
     max-duration-minutes: ${LINTSEC_SCAN_MAX_DURATION_MINUTES:5}
+    max-concurrent-per-user: ${LINTSEC_SCAN_MAX_CONCURRENT_PER_USER:3}
   ai:
     provider: gemini
     gemini-api-key: ${GEMINI_API_KEY:}
