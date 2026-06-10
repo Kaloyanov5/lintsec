@@ -33,6 +33,10 @@ public class AiExplanationService {
     }
 
     private String cacheKey(Finding finding) {
-        return finding.getVulnerabilityType().name() + ":" + finding.getTitle();
+        // Key on the finding's stable identity (type + severity), NOT the title. Titles embed
+        // site-controlled values (e.g. a reflected parameter name), so keying on them gives an
+        // unbounded, per-site key space with little reuse — and lets a hostile target spray cache
+        // entries. The explanation is general to the vulnerability class, so this is also a better cache.
+        return finding.getVulnerabilityType().name() + ":" + finding.getSeverity().name();
     }
 }

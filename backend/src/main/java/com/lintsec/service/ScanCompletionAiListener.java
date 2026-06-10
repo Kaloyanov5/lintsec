@@ -21,6 +21,9 @@ import java.util.stream.Collectors;
 public class ScanCompletionAiListener {
 
     private static final long DELAY_BETWEEN_CALLS_MS = 1000;
+    // Cap the AI fan-out per scan so a target that produces many distinct finding groups can't drive
+    // unbounded Gemini spend / runtime. Groups arrive severity-ordered, so the most severe win.
+    private static final int MAX_GROUPS_PER_SCAN = 25;
     private static final Logger log = LoggerFactory.getLogger(ScanCompletionAiListener.class);
     private final AiExplanationService explanationService;
     private final FindingRepository findingRepository;
@@ -43,7 +46,7 @@ public class ScanCompletionAiListener {
     }
 
     @EventListener
-    @Async
+    @Async("aiExecutor")
     public void onScanComplete(ScanEvent event) {
         if (event.type() != ScanEvent.EventType.SCAN_COMPLETE) return;
         Long scanId = event.scanId();
@@ -52,12 +55,13 @@ public class ScanCompletionAiListener {
         Map<GroupKey, List<Finding>> groups = scanFindings.stream()
                 .collect(Collectors.groupingBy(GroupKey::of, LinkedHashMap::new, Collectors.toList()));
 
-        log.info("starting AI explanations for scan {} ({} findings, {} groups)",
-                scanId, scanFindings.size(), groups.size());
+        List<List<Finding>> toExplain = groups.values().stream().limit(MAX_GROUPS_PER_SCAN).toList();
+        log.info("starting AI explanations for scan {} ({} findings, {} groups, explaining {})",
+                scanId, scanFindings.size(), groups.size(), toExplain.size());
 
         int explained = 0;
         int skipped = 0;
-        for (List<Finding> members : groups.values()) {
+        for (List<Finding> members : toExplain) {
             Optional<String> text = explanationService.explain(members.getFirst());
             if (text.isPresent()) {
                 try {

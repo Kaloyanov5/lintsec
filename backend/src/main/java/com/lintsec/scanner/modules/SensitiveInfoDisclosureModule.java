@@ -89,7 +89,10 @@ public final class SensitiveInfoDisclosureModule implements ScannerModule {
 
             for (DisclosureRule rule : RULES) {
                 Matcher m = rule.pattern.matcher(body);
-                while (m.find()) {
+                // One finding per (url, rule): a page with many matches (e.g. a stack trace's many
+                // lines) would otherwise flood the results and the AI explanation queue with
+                // near-identical findings. Report the first occurrence as the representative.
+                if (m.find()) {
                     findings.add(new ScanFinding(
                             "Sensitive info disclosure: " + rule.ruleName,
                             rule.severity,

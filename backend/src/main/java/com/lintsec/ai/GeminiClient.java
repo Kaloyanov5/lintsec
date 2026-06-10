@@ -43,7 +43,8 @@ public class GeminiClient {
             );
 
             GeminiResponse response = restClient.post()
-                    .uri("/models/{model}:generateContent?key={key}", aiProperties.model(), apiKey)
+                    .uri("/models/{model}:generateContent", aiProperties.model())
+                    .header("x-goog-api-key", apiKey)   // header, not query string — keeps the key out of access/proxy logs
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
