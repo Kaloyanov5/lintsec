@@ -1,5 +1,6 @@
 package com.lintsec.controller;
 
+import com.lintsec.dto.ChangePasswordRequest;
 import com.lintsec.dto.LoginRequest;
 import com.lintsec.dto.LoginResponse;
 import com.lintsec.dto.RegisterRequest;
@@ -83,6 +84,13 @@ public class AuthController {
     public ResponseEntity<Void> disableTwoFactor(@AuthenticationPrincipal AppUserPrincipal principal,
                                                  @Valid @RequestBody TwoFactorDisableRequest req) {
         authService.disableTwoFactor(principal.id(), req.password());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@AuthenticationPrincipal AppUserPrincipal principal,
+                                               @Valid @RequestBody ChangePasswordRequest req) {
+        authService.changePassword(principal.id(), req.currentPassword(), req.newPassword());
         return ResponseEntity.ok().build();
     }
 

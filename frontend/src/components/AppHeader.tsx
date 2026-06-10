@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Menu, X } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, Settings, X } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -110,6 +110,15 @@ export function AppHeader() {
                       <p className="truncate text-xs text-[color:var(--color-muted)]">{user.email}</p>
                     </div>
                   )}
+                  <Link
+                    to="/settings"
+                    role="menuitem"
+                    onClick={() => setUserOpen(false)}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-surface-muted)]"
+                  >
+                    <Settings size={15} aria-hidden="true" />
+                    Account settings
+                  </Link>
                   <button
                     type="button"
                     role="menuitem"
@@ -158,6 +167,14 @@ export function AppHeader() {
           </nav>
           <div className="mt-2 flex flex-col gap-1 border-t border-[color:var(--color-border)] pt-2">
             <p className="px-3 py-1 text-xs text-[color:var(--color-muted)]">{accountLabel}</p>
+            <Link
+              to="/settings"
+              onClick={() => setMenuOpen(false)}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-surface-muted)]"
+            >
+              <Settings size={15} aria-hidden="true" />
+              Account settings
+            </Link>
             <button
               type="button"
               onClick={() => {

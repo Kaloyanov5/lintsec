@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 import type {
+  ChangePasswordRequest,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -43,6 +44,10 @@ export const authService = {
 
   twoFactorDisable(body: TwoFactorDisableRequest) {
     return api.post<void>('/auth/2fa/disable', body).then((r) => r.data)
+  },
+
+  changePassword(body: ChangePasswordRequest) {
+    return api.post<void>('/auth/change-password', body).then((r) => r.data)
   },
 
   logout() {

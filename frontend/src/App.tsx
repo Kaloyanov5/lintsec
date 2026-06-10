@@ -11,6 +11,7 @@ import RegisterPage from '@/pages/RegisterPage'
 import VerifyEmailPage from '@/pages/VerifyEmailPage'
 import OAuthCallbackPage from '@/pages/OAuthCallbackPage'
 import DashboardPage from '@/pages/DashboardPage'
+import SettingsPage from '@/pages/SettingsPage'
 import NewScanPage from '@/pages/NewScanPage'
 import ScanResultsPage from '@/pages/ScanResultsPage'
 import ScanHistoryPage from '@/pages/ScanHistoryPage'
@@ -37,6 +38,7 @@ function App() {
                   <Route path="/scans/new" element={<NewScanPage />} />
                   <Route path="/scans/history" element={<ScanHistoryPage />} />
                   <Route path="/scans/:id" element={<ScanResultsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />
