@@ -2,6 +2,7 @@ package com.lintsec.scanner;
 
 import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormField;
+import com.lintsec.crawler.TargetGuard;
 import org.jsoup.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,13 @@ public final class FormSubmitter {
         if (isStateChangingForm(form)) {
             log.debug("skipping state-changing form {} — not fuzzing (would alter scan session/credentials)",
                     form.action());
+            return Optional.empty();
+        }
+
+        // The action comes from the target's own HTML, so a hostile site could point it at an
+        // internal address (SSRF). Drop forms whose action is not a permitted public target.
+        if (!TargetGuard.isAllowed(form.action())) {
+            log.debug("skipping form with disallowed action {} (SSRF guard)", form.action());
             return Optional.empty();
         }
 

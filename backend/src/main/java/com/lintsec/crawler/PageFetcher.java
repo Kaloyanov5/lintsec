@@ -18,10 +18,15 @@ public class PageFetcher {
     }
 
     public Optional<Document> fetch(String url) {
+        if (!TargetGuard.isAllowed(url)) {
+            log.debug("fetch blocked by SSRF guard: {}", url);
+            return Optional.empty();
+        }
         try {
             org.jsoup.Connection connection = Jsoup.connect(url)
                     .userAgent(config.userAgent())
                     .timeout(config.timeoutMs())
+                    .maxBodySize(HttpLimits.MAX_RESPONSE_BYTES)
                     .ignoreContentType(true);
             config.authSession().applyTo(connection);
             return Optional.of(connection.get());

@@ -3,6 +3,7 @@ package com.lintsec.scanner;
 import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormExtractor;
 import com.lintsec.crawler.FormField;
+import com.lintsec.crawler.TargetGuard;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public final class FormStateRefresher {
      */
     public static Optional<Map<String, String>> freshHiddenValues(DiscoveredForm form, ScanContext context) {
         if (!hasTokenField(form)) return Optional.empty();
+        if (!TargetGuard.isAllowed(form.pageUrl())) return Optional.empty();
         try {
             Document doc = context.openConnection(form.pageUrl())
                     .method(Connection.Method.GET)
