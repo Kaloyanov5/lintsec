@@ -79,7 +79,7 @@ public final class MissingSecurityHeadersModule implements ScannerModule {
                 resp = context.openConnection(url)
                         .method(Connection.Method.GET)
                         .ignoreHttpErrors(true)
-                        .followRedirects(true)
+                        .followRedirects(false)
                         .ignoreContentType(true)
                         .execute();
                 log.debug("fetched URL: {} with status {}", url, resp.statusCode());

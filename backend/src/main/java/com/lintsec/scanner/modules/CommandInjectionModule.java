@@ -73,7 +73,7 @@ public final class CommandInjectionModule implements ScannerModule {
                 resp = context.openConnection(mutatedUrl)
                         .method(Connection.Method.GET)
                         .ignoreHttpErrors(true)
-                        .followRedirects(true)
+                        .followRedirects(false)
                         .ignoreContentType(true)
                         .execute();
             } catch (Exception e) {

@@ -42,7 +42,7 @@ public final class MissingSriModule implements ScannerModule {
                 resp = context.openConnection(url)
                         .method(Connection.Method.GET)
                         .ignoreHttpErrors(true)
-                        .followRedirects(true)
+                        .followRedirects(false)
                         .ignoreContentType(true)
                         .execute();
             } catch (Exception e) {

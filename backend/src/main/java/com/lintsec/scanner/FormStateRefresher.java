@@ -3,6 +3,7 @@ package com.lintsec.scanner;
 import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormExtractor;
 import com.lintsec.crawler.FormField;
+import com.lintsec.crawler.GuardedHttp;
 import com.lintsec.crawler.TargetGuard;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
@@ -36,12 +37,12 @@ public final class FormStateRefresher {
         if (!hasTokenField(form)) return Optional.empty();
         if (!TargetGuard.isAllowed(form.pageUrl())) return Optional.empty();
         try {
-            Document doc = context.openConnection(form.pageUrl())
+            Optional<Connection.Response> respOpt = GuardedHttp.execute(context.openConnection(form.pageUrl())
                     .method(Connection.Method.GET)
                     .ignoreHttpErrors(true)
-                    .ignoreContentType(true)
-                    .execute()
-                    .parse();
+                    .ignoreContentType(true));
+            if (respOpt.isEmpty()) return Optional.empty();
+            Document doc = respOpt.get().parse();
             Optional<Map<String, String>> fresh = extractFreshValues(doc, form);
             if (fresh.isEmpty()) {
                 log.debug("token refresh: form {} not found on re-fetch of {}", form.signature(), form.pageUrl());

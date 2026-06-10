@@ -22,16 +22,21 @@ public class PageFetcher {
             log.debug("fetch blocked by SSRF guard: {}", url);
             return Optional.empty();
         }
+        org.jsoup.Connection connection = Jsoup.connect(url)
+                .userAgent(config.userAgent())
+                .timeout(config.timeoutMs())
+                .maxBodySize(HttpLimits.MAX_RESPONSE_BYTES)
+                .ignoreContentType(true);
+        config.authSession().applyTo(connection);
+
+        // Guarded execute follows redirects manually, re-validating each hop so a public page
+        // can't 302 the crawler onto an internal address.
+        Optional<org.jsoup.Connection.Response> response = GuardedHttp.execute(connection);
+        if (response.isEmpty()) return Optional.empty();
         try {
-            org.jsoup.Connection connection = Jsoup.connect(url)
-                    .userAgent(config.userAgent())
-                    .timeout(config.timeoutMs())
-                    .maxBodySize(HttpLimits.MAX_RESPONSE_BYTES)
-                    .ignoreContentType(true);
-            config.authSession().applyTo(connection);
-            return Optional.of(connection.get());
+            return Optional.of(response.get().parse());
         } catch (IOException e) {
-            log.debug("fetch failed for {}: {}", url, e.getMessage());
+            log.debug("parse failed for {}: {}", url, e.getMessage());
             return Optional.empty();
         }
     }

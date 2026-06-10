@@ -2,6 +2,7 @@ package com.lintsec.scanner;
 
 import com.lintsec.crawler.DiscoveredForm;
 import com.lintsec.crawler.FormField;
+import com.lintsec.crawler.GuardedHttp;
 import com.lintsec.crawler.TargetGuard;
 import org.jsoup.Connection;
 import org.slf4j.Logger;
@@ -108,13 +109,19 @@ public final class FormSubmitter {
                 : Connection.Method.POST;
 
         try {
-            Connection.Response resp = context.openConnection(form.action())
+            Connection connection = context.openConnection(form.action())
                     .method(method)
                     .data(data)
                     .ignoreHttpErrors(true)
-                    .followRedirects(followRedirects)
-                    .ignoreContentType(true)
-                    .execute();
+                    .ignoreContentType(true);
+
+            // When following redirects, walk the chain through the guard so a target form can't
+            // 302 the submission onto an internal address; otherwise honor the explicit no-follow.
+            Optional<Connection.Response> respOpt = followRedirects
+                    ? GuardedHttp.execute(connection)
+                    : Optional.of(connection.followRedirects(false).execute());
+            if (respOpt.isEmpty()) return Optional.empty();
+            Connection.Response resp = respOpt.get();
             log.debug("submitted {} form to {} (field {}) -> {}",
                     method, form.action(), targetField, resp.statusCode());
             return Optional.of(resp);

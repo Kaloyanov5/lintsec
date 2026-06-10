@@ -70,7 +70,7 @@ public final class PathTraversalModule implements ScannerModule {
                 resp = context.openConnection(mutatedUrl)
                         .method(Connection.Method.GET)
                         .ignoreHttpErrors(true)
-                        .followRedirects(true)
+                        .followRedirects(false)
                         .ignoreContentType(true)
                         .execute();
             } catch (Exception e) {
