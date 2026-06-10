@@ -33,10 +33,10 @@ public class LoginAttemptService {
 
     public void recordFailure(String email) {
         String k = key(email);
-        Long count = redis.opsForValue().increment(k);
-        if (count != null && count == 1L) {
-            redis.expire(k, WINDOW);
-        }
+        redis.opsForValue().increment(k);
+        // Slide the window on every failure so continued attempts keep extending the lock, rather
+        // than anchoring expiry to the first failure (which let an attacker wait out the original window).
+        redis.expire(k, WINDOW);
     }
 
     public void clear(String email) {

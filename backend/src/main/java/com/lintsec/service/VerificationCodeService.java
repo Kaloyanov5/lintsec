@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * Stores short-lived 6-digit codes in Redis with an attempt counter.
@@ -35,6 +36,7 @@ public class VerificationCodeService {
     }
 
     private static final int MAX_ATTEMPTS = 5;
+    private static final Duration ISSUE_COOLDOWN = Duration.ofSeconds(60);
     private static final SecureRandom RNG = new SecureRandom();
 
     private final StringRedisTemplate redis;
@@ -48,6 +50,20 @@ public class VerificationCodeService {
         redis.opsForValue().set(codeKey(purpose, subject), code, purpose.ttl);
         redis.delete(attemptKey(purpose, subject));
         return code;
+    }
+
+    /**
+     * Issues a fresh code only if this subject is not within the issuance cooldown, returning empty
+     * otherwise. Because {@link #issue} clears the attempt counter, an unthrottled re-issue would let
+     * an attacker reset the 5-guess limit at will; the cooldown caps re-issue (and inbox flooding)
+     * for auto-sent codes (login-2FA, enable-2FA, verification resends).
+     */
+    public Optional<String> issueIfNotCoolingDown(Purpose purpose, String subject) {
+        Boolean acquired = redis.opsForValue().setIfAbsent(cooldownKey(purpose, subject), "1", ISSUE_COOLDOWN);
+        if (!Boolean.TRUE.equals(acquired)) {
+            return Optional.empty();
+        }
+        return Optional.of(issue(purpose, subject));
     }
 
     public CheckResult verify(Purpose purpose, String subject, String submittedCode) {
@@ -92,5 +108,9 @@ public class VerificationCodeService {
 
     private static String attemptKey(Purpose purpose, String subject) {
         return "lintsec:vcode:" + purpose.key + ":" + subject + ":attempts";
+    }
+
+    private static String cooldownKey(Purpose purpose, String subject) {
+        return "lintsec:vcode:" + purpose.key + ":" + subject + ":cooldown";
     }
 }

@@ -123,14 +123,23 @@ public class AuthService {
         }
 
         if (!user.isEmailVerified()) {
-            throw new UnauthorizedException("email not verified");
+            // Return the SAME generic failure as a wrong password — otherwise a correct-password
+            // submit on an unverified account is distinguishable, turning login into a password
+            // oracle. Silently resend the verification code (throttled) so the legitimate owner,
+            // who controls the inbox, can still finish verifying.
+            codeService.issueIfNotCoolingDown(VerificationCodeService.Purpose.EMAIL_VERIFY, email.toLowerCase())
+                    .ifPresent(code -> emailService.sendVerificationCode(user.getEmail(), code));
+            loginAttemptService.recordFailure(email);
+            throw new UnauthorizedException("invalid email or password");
         }
 
         loginAttemptService.clear(email);
 
         if (user.isTwoFactorEnabled()) {
-            String code = codeService.issue(VerificationCodeService.Purpose.LOGIN_2FA, "uid:" + user.getId());
-            emailService.sendTwoFactorCode(user.getEmail(), code);
+            // Throttle re-issue so repeated logins can't flood the inbox or reset the 5-guess limit;
+            // when throttled the prior code is still valid, so we proceed to the challenge regardless.
+            codeService.issueIfNotCoolingDown(VerificationCodeService.Purpose.LOGIN_2FA, "uid:" + user.getId())
+                    .ifPresent(code -> emailService.sendTwoFactorCode(user.getEmail(), code));
             String challengeId = twoFactorChallengeStore.createChallenge(user.getId());
             return LoginResponse.twoFactorChallenge(challengeId);
         }
@@ -170,7 +179,8 @@ public class AuthService {
         if (user.isTwoFactorEnabled()) {
             throw new ConflictException("2FA already enabled");
         }
-        String code = codeService.issue(VerificationCodeService.Purpose.ENABLE_2FA, "uid:" + userId);
+        String code = codeService.issueIfNotCoolingDown(VerificationCodeService.Purpose.ENABLE_2FA, "uid:" + userId)
+                .orElseThrow(() -> new RateLimitedException("please wait before requesting another code", 60));
         emailService.sendTwoFactorEnableCode(user.getEmail(), code);
     }
 
@@ -216,6 +226,12 @@ public class AuthService {
     }
 
     public void establishSession(User user, HttpServletRequest request, HttpServletResponse response) {
+        // Rotate the session id on authentication to prevent fixation: a session id an attacker
+        // planted in the victim's browser before login must not survive into the authenticated
+        // session. If no session exists yet, saveContext below mints a fresh one (also un-fixed).
+        if (request.getSession(false) != null) {
+            request.changeSessionId();
+        }
         AppUserPrincipal principal = AppUserPrincipal.from(user);
         Authentication auth = UsernamePasswordAuthenticationToken.authenticated(
                 principal,

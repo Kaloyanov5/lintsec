@@ -10,6 +10,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -55,6 +58,27 @@ class AuthServiceTest {
         assertThrows(UnauthorizedException.class,
                 () -> authService.changePassword(1L, "wrong", "NewPassw0rd"));
         verify(userService, never()).updatePassword(any(), any());
+    }
+
+    @Test
+    void loginUnverifiedAccountReturnsGenericErrorAndResendsCode() {
+        // Security: a correct password on an unverified account must NOT be distinguishable from a
+        // wrong password, or login becomes a password oracle. The code is silently resent.
+        User user = localUser();
+        user.setEmail("user@x.com");
+        user.setEmailVerified(false);
+        when(loginAttemptService.isLocked("user@x.com")).thenReturn(false);
+        when(userService.findByEmail("user@x.com")).thenReturn(Optional.of(user));
+        when(userService.checkPassword(user, "correct")).thenReturn(true);
+        when(codeService.issueIfNotCoolingDown(VerificationCodeService.Purpose.EMAIL_VERIFY, "user@x.com"))
+                .thenReturn(Optional.of("123456"));
+
+        UnauthorizedException ex = assertThrows(UnauthorizedException.class,
+                () -> authService.login("user@x.com", "correct", null, null));
+
+        assertEquals("invalid email or password", ex.getMessage());
+        verify(emailService).sendVerificationCode("user@x.com", "123456");
+        verify(loginAttemptService).recordFailure("user@x.com");
     }
 
     @Test
