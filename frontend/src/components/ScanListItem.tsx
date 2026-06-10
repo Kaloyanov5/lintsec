@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { RotateCw, Trash2, X } from 'lucide-react'
-import { cn } from '@/lib/cn'
 import { parseProblem } from '@/lib/problem'
 import { scanService } from '@/services/scanService'
-import { isCanceling, isTerminalStatus, statusBadgeClass, statusLabel } from '@/lib/scanStatus'
+import { isCanceling, isTerminalStatus } from '@/lib/scanStatus'
+import { StatusBadge } from '@/components/StatusBadge'
 import type { Scan } from '@/types'
 
 function formatDate(iso: string): string {
@@ -59,11 +59,9 @@ export function ScanListItem({ scan, onChanged }: { scan: Scan; onChanged?: () =
   }
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 transition-colors hover:bg-[color:var(--color-surface-muted)]">
+    <div className="flex items-center gap-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-border-strong)] hover:shadow-[var(--shadow-card-hover)]">
       <Link to={`/scans/${scan.id}`} className="flex min-w-0 flex-1 items-center gap-4">
-        <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-medium', statusBadgeClass(scan))}>
-          {statusLabel(scan)}
-        </span>
+        <StatusBadge scan={scan} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-mono text-sm text-[color:var(--color-foreground)]">
             {scan.targetUrl}
