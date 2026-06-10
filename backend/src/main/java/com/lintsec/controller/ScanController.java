@@ -2,7 +2,9 @@ package com.lintsec.controller;
 
 import com.lintsec.domain.Finding;
 import com.lintsec.domain.Scan;
+import com.lintsec.domain.ScanStatus;
 import com.lintsec.domain.Severity;
+import com.lintsec.dto.ScanEvent;
 import com.lintsec.dto.FindingGroupResponse;
 import com.lintsec.dto.FindingResponse;
 import com.lintsec.dto.ScanCreateRequest;
@@ -192,8 +194,25 @@ public class ScanController {
             @AuthenticationPrincipal AppUserPrincipal principal,
             @PathVariable Long id
     ) {
-        scanRepository.findByIdAndUserId(id, principal.id())
+        Scan scan = scanRepository.findByIdAndUserId(id, principal.id())
                 .orElseThrow(() -> new NotFoundException("scan not found"));
-        return sseRegistry.register(id);
+        SseEmitter emitter = sseRegistry.register(id);
+        // If the scan has already finished, no further events will be published — emit one terminal
+        // event and complete now, instead of holding the connection open until the 10-minute timeout.
+        ScanEvent.EventType terminal = terminalEventType(scan.getStatus());
+        if (terminal != null) {
+            sseRegistry.emitTerminalSnapshot(id, terminal, scan.getPagesCrawled(),
+                    (int) findingRepository.countByScanId(id));
+        }
+        return emitter;
+    }
+
+    private static ScanEvent.EventType terminalEventType(ScanStatus status) {
+        return switch (status) {
+            case COMPLETE -> ScanEvent.EventType.SCAN_COMPLETE;
+            case FAILED -> ScanEvent.EventType.FAILED;
+            case CANCELLED -> ScanEvent.EventType.CANCELLED;
+            case PENDING, RUNNING -> null;
+        };
     }
 }

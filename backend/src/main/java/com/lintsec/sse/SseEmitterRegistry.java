@@ -25,10 +25,34 @@ public class SseEmitterRegistry {
 
         Runnable remove = () -> removeEmitter(scanId, emitter);
         emitter.onCompletion(remove);
-        emitter.onTimeout(remove);
+        // Complete the emitter on timeout: without this, the timeout dispatch raises an
+        // AsyncRequestTimeoutException (logged as a noisy stack trace). complete() pre-empts it,
+        // and onCompletion then removes the emitter from the registry.
+        emitter.onTimeout(emitter::complete);
         emitter.onError(t -> remove.run());
 
         return emitter;
+    }
+
+    /**
+     * Sends a single terminal event to any emitters currently registered for an already-finished
+     * scan, then completes them. The live stream has no replay, so a client that subscribes after
+     * the scan ended (or reconnects post-completion) would otherwise hold the connection open until
+     * the timeout. Removing the bucket first also closes the register/terminal-event race window.
+     */
+    public void emitTerminalSnapshot(Long scanId, ScanEvent.EventType type, int pagesCrawled, int findingsCount) {
+        List<SseEmitter> emitters = emittersByScanId.remove(scanId);
+        if (emitters == null || emitters.isEmpty()) return;
+
+        ScanEvent event = new ScanEvent(scanId, type, pagesCrawled, findingsCount, null);
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event().name("scan").data(event));
+                emitter.complete();
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        }
     }
 
     @EventListener
