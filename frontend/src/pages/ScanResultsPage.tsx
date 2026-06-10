@@ -8,17 +8,22 @@ import {
   FileJson,
   FileText,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
 } from 'lucide-react'
 import { scanService } from '@/services/scanService'
 import { useScanEvents } from '@/hooks/useScanEvents'
 import { parseProblem } from '@/lib/problem'
-import { SEVERITIES, SEVERITY_BADGE, SEVERITY_ORDER } from '@/lib/severity'
+import { SEVERITIES, SEVERITY_BADGE, SEVERITY_DOT, SEVERITY_ORDER, SEVERITY_RAIL } from '@/lib/severity'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StatusBadge } from '@/components/StatusBadge'
 import type { FindingGroup, Severity, VulnerabilityType } from '@/types'
-import type { Scan, ScanStatus, ScanEvent } from '@/types'
+import type { Scan, ScanEvent } from '@/types'
 
 const VULN_LABEL: Record<VulnerabilityType, string> = {
   XSS: 'Cross-Site Scripting',
@@ -35,14 +40,6 @@ const VULN_LABEL: Record<VulnerabilityType, string> = {
   COMMAND_INJECTION: 'Command Injection',
   MIXED_CONTENT: 'Mixed Content',
   MISSING_SRI: 'Missing Subresource Integrity',
-}
-
-const STATUS_BADGE: Record<ScanStatus, string> = {
-  PENDING: 'bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300',
-  RUNNING: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
-  COMPLETE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-  FAILED: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
-  CANCELLED: 'bg-slate-100 text-slate-500 dark:bg-slate-500/15 dark:text-slate-400',
 }
 
 function vulnLabel(type: VulnerabilityType): string {
@@ -141,8 +138,27 @@ function ScanResults({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <main className="mx-auto flex max-w-5xl items-center justify-center px-6 py-24">
-        <Spinner />
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <BackLink />
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <Skeleton className="h-8 w-44 rounded-lg" />
+            <Skeleton className="mt-2 h-4 w-72 rounded" />
+          </div>
+          <Skeleton className="h-9 w-60 rounded-lg" />
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Skeleton className="h-7 w-24 rounded-lg" />
+          <Skeleton className="h-7 w-20 rounded-lg" />
+          <Skeleton className="h-7 w-24 rounded-lg" />
+          <Skeleton className="h-7 w-16 rounded-lg" />
+          <Skeleton className="h-7 w-16 rounded-lg" />
+        </div>
+        <div className="mt-6 space-y-3">
+          <Skeleton className="h-14 rounded-xl" />
+          <Skeleton className="h-14 rounded-xl" />
+          <Skeleton className="h-14 rounded-xl" />
+        </div>
       </main>
     )
   }
@@ -167,42 +183,42 @@ function ScanResults({ id }: { id: string }) {
   const aiReady = groups.filter((g) => g.aiExplanation).length
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-fade-in-up">
       <BackLink />
 
-      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-medium">Scan results</h1>
-          {scan && (
-            <p className="mt-1 truncate font-mono text-sm text-[color:var(--color-muted)]">
-              {scan.targetUrl}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ExportLink id={id} format="pdf" icon={<FileText size={15} aria-hidden="true" />}>
-            PDF
-          </ExportLink>
-          <ExportLink id={id} format="json" icon={<FileJson size={15} aria-hidden="true" />}>
-            JSON
-          </ExportLink>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleRefresh}
-            loading={refreshing}
-            leftIcon={<RefreshCw size={15} aria-hidden="true" />}
-          >
-            Refresh
-          </Button>
-        </div>
+      <div className="mt-4">
+        <PageHeader
+          title="Scan results"
+          subtitle={
+            scan ? (
+              <span className="block max-w-xl truncate font-mono">{scan.targetUrl}</span>
+            ) : undefined
+          }
+          actions={
+            <>
+              <ExportLink id={id} format="pdf" icon={<FileText size={15} aria-hidden="true" />}>
+                PDF
+              </ExportLink>
+              <ExportLink id={id} format="json" icon={<FileJson size={15} aria-hidden="true" />}>
+                JSON
+              </ExportLink>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRefresh}
+                loading={refreshing}
+                leftIcon={<RefreshCw size={15} aria-hidden="true" />}
+              >
+                Refresh
+              </Button>
+            </>
+          }
+        />
       </div>
 
       {scan && (
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className={cn('rounded-full px-2.5 py-1 font-medium', STATUS_BADGE[scan.status])}>
-            {scan.status}
-          </span>
+          <StatusBadge scan={scan} />
           {scan.authenticated && (
             <span className="rounded-full border border-[color:var(--color-border)] px-2.5 py-1 font-medium text-[color:var(--color-muted)]">
               Authenticated
@@ -232,10 +248,17 @@ function ScanResults({ id }: { id: string }) {
           <span
             key={sev}
             className={cn(
-              'rounded-lg px-3 py-1.5 text-xs font-medium',
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium',
               counts[sev] > 0 ? SEVERITY_BADGE[sev] : 'bg-[color:var(--color-surface-muted)] text-[color:var(--color-muted)]',
             )}
           >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                counts[sev] > 0 ? SEVERITY_DOT[sev] : 'bg-current opacity-40',
+              )}
+            />
             {counts[sev]} {sev}
           </span>
         ))}
@@ -246,9 +269,9 @@ function ScanResults({ id }: { id: string }) {
         {live || finalizing ? (
           <LivePanel event={liveEvent} />
         ) : sorted.length === 0 ? (
-          <p className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 text-center text-sm text-[color:var(--color-muted)]">
-            No findings for this scan.
-          </p>
+          <EmptyState icon={ShieldCheck} title="No findings">
+            This scan completed without detecting any issues.
+          </EmptyState>
         ) : (
           sorted.map((group) => {
             const key = groupKey(group)
@@ -345,6 +368,11 @@ function LivePanel({ event }: { event: ScanEvent | null }) {
           {heading}
         </span>
       </div>
+      {!failed && !scanDone && (
+        <div className="relative mt-4 h-1 overflow-hidden rounded-full bg-[color:var(--color-surface-muted)]">
+          <div className="absolute inset-y-0 w-1/3 rounded-full bg-[color:var(--color-primary)] motion-safe:animate-progress-sweep" />
+        </div>
+      )}
       {!failed && (
         <ul className="mt-4 space-y-2 text-sm">
           <LiveStep done={crawlDone} label={crawlDone ? `Crawled ${event.pagesCrawled} pages` : 'Crawling…'} />
@@ -368,7 +396,12 @@ function GroupCard({
   onToggle: () => void
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+    <div
+      className={cn(
+        'overflow-hidden rounded-xl border border-l-4 border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[var(--shadow-card)]',
+        SEVERITY_RAIL[group.severity],
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}
@@ -402,7 +435,7 @@ function GroupCard({
       </button>
 
       {open && (
-        <div className="space-y-4 border-t border-[color:var(--color-border)] px-4 py-4 text-sm">
+        <div className="space-y-4 border-t border-[color:var(--color-border)] px-4 py-4 text-sm motion-safe:animate-fade-in-up">
           {/* AI explanation, featured */}
           <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-500/20 dark:bg-cyan-500/10">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
