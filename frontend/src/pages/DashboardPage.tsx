@@ -51,7 +51,7 @@ export default function DashboardPage() {
           <Skeleton className="h-8 w-64 rounded-lg" />
           <Skeleton className="h-10 w-28 rounded-lg" />
         </div>
-        <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Skeleton className="h-[5.25rem] rounded-xl" />
           <Skeleton className="h-[5.25rem] rounded-xl" />
           <Skeleton className="h-[5.25rem] rounded-xl" />
