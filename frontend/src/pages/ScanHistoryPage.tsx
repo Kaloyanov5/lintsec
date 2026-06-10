@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Radar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Spinner } from '@/components/ui/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { ScanListItem } from '@/components/ScanListItem'
 import { parseProblem } from '@/lib/problem'
 import { scanService } from '@/services/scanService'
@@ -27,32 +29,40 @@ export default function ScanHistoryPage() {
   }, [load])
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-medium">Scans</h1>
-        <Button
-          size="sm"
-          onClick={() => navigate('/scans/new')}
-          leftIcon={<Plus size={15} aria-hidden="true" />}
-        >
-          New scan
-        </Button>
-      </div>
+    <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-fade-in-up">
+      <PageHeader
+        title="Scans"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => navigate('/scans/new')}
+            leftIcon={<Plus size={15} aria-hidden="true" />}
+          >
+            New scan
+          </Button>
+        }
+      />
 
       {loading ? (
-        <div className="flex justify-center py-24">
-          <Spinner />
+        <div className="mt-6 space-y-2">
+          <Skeleton className="h-[4.25rem] rounded-xl" />
+          <Skeleton className="h-[4.25rem] rounded-xl" />
+          <Skeleton className="h-[4.25rem] rounded-xl" />
+          <Skeleton className="h-[4.25rem] rounded-xl" />
         </div>
       ) : error ? (
         <p className="mt-6 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-danger)]">
           {error}
         </p>
       ) : scans.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-10 text-center">
-          <p className="text-sm text-[color:var(--color-muted)]">No scans yet.</p>
-          <Button className="mt-4" onClick={() => navigate('/scans/new')}>
-            Start your first scan
-          </Button>
+        <div className="mt-6">
+          <EmptyState
+            icon={Radar}
+            title="No scans yet"
+            action={<Button onClick={() => navigate('/scans/new')}>Start your first scan</Button>}
+          >
+            Run your first scan to see results here.
+          </EmptyState>
         </div>
       ) : (
         <div className="mt-6 space-y-2">
