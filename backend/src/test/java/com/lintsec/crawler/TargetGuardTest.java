@@ -39,6 +39,24 @@ class TargetGuardTest {
     }
 
     @Test
+    void blocksCgnatUlaAndOtherSpecialUseRanges() {
+        assertFalse(TargetGuard.isAllowed("http://100.64.0.1/"));        // CGNAT 100.64.0.0/10
+        assertFalse(TargetGuard.isAllowed("http://100.127.255.254/"));
+        assertFalse(TargetGuard.isAllowed("http://[fc00::1]/"));         // IPv6 ULA fc00::/7
+        assertFalse(TargetGuard.isAllowed("http://[fd12:3456::1]/"));
+        assertFalse(TargetGuard.isAllowed("http://198.18.0.1/"));        // benchmarking 198.18.0.0/15
+        assertFalse(TargetGuard.isAllowed("http://192.0.2.1/"));         // TEST-NET-1
+        assertFalse(TargetGuard.isAllowed("http://240.0.0.1/"));         // reserved 240.0.0.0/4
+        assertFalse(TargetGuard.isAllowed("http://255.255.255.255/"));   // limited broadcast
+    }
+
+    @Test
+    void allowsAddressesJustOutsideBlockedRanges() {
+        assertTrue(TargetGuard.isAllowed("http://100.63.255.255/"));     // one below CGNAT
+        assertTrue(TargetGuard.isAllowed("http://198.20.0.1/"));         // one above benchmarking
+    }
+
+    @Test
     void blocksNonHttpSchemes() {
         assertFalse(TargetGuard.isAllowed("ftp://8.8.8.8/"));
         assertFalse(TargetGuard.isAllowed("file:///etc/passwd"));

@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.IDN;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -77,12 +78,30 @@ public final class TargetGuard {
     }
 
     /** True for addresses that must never be reachable from a scan: loopback, link-local,
-     *  site-local (RFC1918), wildcard (0.0.0.0 / ::), and multicast. Pure — no DNS. */
+     *  site-local (RFC1918), wildcard (0.0.0.0 / ::), multicast, plus special-use ranges the
+     *  JDK helpers miss (IPv6 ULA, IPv4 CGNAT, benchmarking/test/reserved nets). Pure — no DNS. */
     static boolean isBlockedAddress(InetAddress address) {
-        return address.isLoopbackAddress()
+        if (address.isLoopbackAddress()
                 || address.isLinkLocalAddress()
                 || address.isSiteLocalAddress()
                 || address.isAnyLocalAddress()
-                || address.isMulticastAddress();
+                || address.isMulticastAddress()) {
+            return true;
+        }
+
+        byte[] b = address.getAddress();
+        if (address instanceof Inet6Address) {
+            // Unique Local Addresses fc00::/7 (not classified site-local by the JDK).
+            return (b[0] & 0xFE) == 0xFC;
+        }
+
+        int b0 = b[0] & 0xFF, b1 = b[1] & 0xFF, b2 = b[2] & 0xFF;
+        if (b0 == 100 && (b1 & 0xC0) == 0x40) return true;          // CGNAT 100.64.0.0/10
+        if (b0 == 192 && b1 == 0 && (b2 == 0 || b2 == 2)) return true; // 192.0.0.0/24, TEST-NET-1
+        if (b0 == 198 && (b1 == 18 || b1 == 19)) return true;       // benchmarking 198.18.0.0/15
+        if (b0 == 198 && b1 == 51 && b2 == 100) return true;        // TEST-NET-2 198.51.100.0/24
+        if (b0 == 203 && b1 == 0 && b2 == 113) return true;         // TEST-NET-3 203.0.113.0/24
+        if (b0 >= 240) return true;                                  // reserved 240.0.0.0/4 + 255.255.255.255
+        return false;
     }
 }
