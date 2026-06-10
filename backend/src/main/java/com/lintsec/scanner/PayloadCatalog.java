@@ -7,6 +7,7 @@ public final class PayloadCatalog {
         return switch (id) {
             case XSS_CANARY_REFLECTED -> "<lintsec_canary_" + nonce + ">";
             case SQLI_SINGLE_QUOTE -> "'";
+            case SQLI_BALANCED -> "''";
             case OPEN_REDIRECT_ABSOLUTE -> "https://lintsec-test.invalid/";
             case PATH_TRAVERSAL_UNIX -> "../../../../../../../../etc/passwd";
             case PATH_TRAVERSAL_WINDOWS -> "..\\..\\..\\..\\..\\..\\..\\..\\windows\\win.ini";
@@ -19,6 +20,7 @@ public final class PayloadCatalog {
         return switch (id) {
             case XSS_CANARY_REFLECTED -> "Canary payload is `<lintsec_canary_{nonce}>`; flagged if reflected without output encoding/escaping.";
             case SQLI_SINGLE_QUOTE -> "Single-quote injected to trigger SQL syntax error in unparameterized query.";
+            case SQLI_BALANCED -> "Balanced two single-quotes; the control payload that should NOT error if the single-quote finding is real.";
             case OPEN_REDIRECT_ABSOLUTE -> "Absolute URL to invalid domain; flagged if server issues 30x Location to it.";
             case PATH_TRAVERSAL_UNIX -> "Deep ../ traversal to /etc/passwd; flagged if the response contains the passwd 'root:...:0:0:' signature.";
             case PATH_TRAVERSAL_WINDOWS -> "Deep ..\\ traversal to windows\\win.ini; flagged if the response contains a win.ini section header.";

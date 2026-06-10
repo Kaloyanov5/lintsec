@@ -3,6 +3,7 @@ package com.lintsec.scanner;
 public enum PayloadId {
     XSS_CANARY_REFLECTED,
     SQLI_SINGLE_QUOTE,
+    SQLI_BALANCED,
     OPEN_REDIRECT_ABSOLUTE,
     PATH_TRAVERSAL_UNIX,
     PATH_TRAVERSAL_WINDOWS,

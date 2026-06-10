@@ -37,7 +37,9 @@ public final class CommandInjectionModule implements ScannerModule {
     );
 
     private static final List<CmdSignature> SIGNATURES = List.of(
-            new CmdSignature(PayloadId.CMDI_UNIX_ID, Pattern.compile("uid=\\d+\\(.+\\)\\s+gid=\\d+")),
+            // Require the full `id` shape — uid AND gid each with a parenthesised name — so loose text
+            // like "uid=1(foo) gid=2" can't false-positive.
+            new CmdSignature(PayloadId.CMDI_UNIX_ID, Pattern.compile("uid=\\d+\\([^)]+\\)\\s+gid=\\d+\\([^)]+\\)")),
             new CmdSignature(PayloadId.CMDI_WINDOWS_VER, Pattern.compile("Windows \\[Version"))
     );
 
@@ -50,22 +52,24 @@ public final class CommandInjectionModule implements ScannerModule {
     public List<ScanFinding> scan(CrawlResult crawlResult, ScanContext context) {
         List<ScanFinding> findings = new ArrayList<>();
 
+        BaselineCache baselines = new BaselineCache(context);
+
         for (String url : crawlResult.visitedUrls()) {
             List<Map.Entry<String, String>> params = UrlParams.parseQueryParameters(URI.create(url));
             for (Map.Entry<String, String> entry : params) {
-                probeParam(url, entry.getKey(), context).ifPresent(findings::add);
+                probeParam(url, entry.getKey(), baselines.forUrl(url), context).ifPresent(findings::add);
             }
         }
 
         for (DiscoveredForm form : crawlResult.forms()) {
             for (String field : FormSubmitter.fuzzableFields(form)) {
-                probeFormField(form, field, context).ifPresent(findings::add);
+                probeFormField(form, field, baselines.forForm(form), context).ifPresent(findings::add);
             }
         }
         return findings;
     }
 
-    private Optional<ScanFinding> probeParam(String url, String paramName, ScanContext context) {
+    private Optional<ScanFinding> probeParam(String url, String paramName, String baselineBody, ScanContext context) {
         for (Injection inj : INJECTIONS) {
             String mutatedUrl = UrlParams.replaceQueryParameters(url, paramName, inj.payload());
             Connection.Response resp;
@@ -80,19 +84,19 @@ public final class CommandInjectionModule implements ScannerModule {
                 log.warn("command-injection param probe failed for {}: {}", mutatedUrl, e.getMessage());
                 continue;
             }
-            Optional<ScanFinding> finding = detect(resp.body())
+            Optional<ScanFinding> finding = confirmInjection(baselineBody, resp.body())
                     .map(matched -> finding(new FindingLocation(url, paramName), "parameter: " + paramName, matched));
             if (finding.isPresent()) return finding;
         }
         return Optional.empty();
     }
 
-    private Optional<ScanFinding> probeFormField(DiscoveredForm form, String field, ScanContext context) {
+    private Optional<ScanFinding> probeFormField(DiscoveredForm form, String field, String baselineBody, ScanContext context) {
         for (Injection inj : INJECTIONS) {
             Optional<Connection.Response> respOpt =
                     FormSubmitter.submit(form, field, inj.payload(), context, true);
             if (respOpt.isEmpty()) continue;
-            Optional<ScanFinding> finding = detect(respOpt.get().body())
+            Optional<ScanFinding> finding = confirmInjection(baselineBody, respOpt.get().body())
                     .map(matched -> finding(new FindingLocation(form.action(), field), "form field: " + field, matched));
             if (finding.isPresent()) return finding;
         }
@@ -106,6 +110,18 @@ public final class CommandInjectionModule implements ScannerModule {
             if (sig.pattern().matcher(body).find()) return Optional.of(sig.os());
         }
         return Optional.empty();
+    }
+
+    /**
+     * Confirms injection by baseline-diffing: the command-output signature must appear under the
+     * payload but NOT in the unmutated baseline. A page that legitimately renders {@code id}-like
+     * output is thus not flagged. Pure — package-private for unit testing.
+     */
+    static Optional<PayloadId> confirmInjection(String baselineBody, String payloadBody) {
+        Optional<PayloadId> inPayload = detect(payloadBody);
+        if (inPayload.isEmpty()) return Optional.empty();
+        if (detect(baselineBody).isPresent()) return Optional.empty();
+        return inPayload;
     }
 
     private ScanFinding finding(FindingLocation location, String vector, PayloadId matched) {
