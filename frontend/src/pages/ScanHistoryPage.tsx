@@ -29,7 +29,7 @@ export default function ScanHistoryPage() {
   }, [load])
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-fade-in-up">
+    <main className="mx-auto max-w-5xl px-6 py-12">
       <PageHeader
         title="Scans"
         actions={
@@ -55,7 +55,7 @@ export default function ScanHistoryPage() {
           {error}
         </p>
       ) : scans.length === 0 ? (
-        <div className="mt-6">
+        <div className="mt-6 motion-safe:animate-fade-in-up">
           <EmptyState
             icon={Radar}
             title="No scans yet"
@@ -65,7 +65,7 @@ export default function ScanHistoryPage() {
           </EmptyState>
         </div>
       ) : (
-        <div className="mt-6 space-y-2">
+        <div className="mt-6 space-y-2 motion-safe:animate-fade-in-up">
           {scans.map((scan) => (
             <ScanListItem key={scan.id} scan={scan} onChanged={load} />
           ))}
