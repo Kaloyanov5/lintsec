@@ -1,3 +1,4 @@
+import { UserRound } from 'lucide-react'
 import { SettingsCard } from '@/components/settings/SettingsCard'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -22,7 +23,7 @@ export function AccountCard() {
   ]
 
   return (
-    <SettingsCard title="Account">
+    <SettingsCard title="Account" icon={UserRound}>
       <dl className="divide-y divide-[color:var(--color-border)]">
         {rows.map((row) => (
           <div key={row.label} className="flex items-center justify-between gap-4 py-2.5 text-sm">

@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
+import { KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -53,7 +54,7 @@ export function PasswordCard() {
   })
 
   return (
-    <SettingsCard title="Password" description="Change the password you use to sign in.">
+    <SettingsCard title="Password" icon={KeyRound} description="Change the password you use to sign in.">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <FormField label="Current password" error={form.formState.errors.currentPassword?.message}>
           <Input
