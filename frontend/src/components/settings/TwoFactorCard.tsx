@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
+import { ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -81,6 +82,7 @@ export function TwoFactorCard() {
   return (
     <SettingsCard
       title="Two-factor authentication"
+      icon={ShieldCheck}
       description="Require a one-time email code when you sign in."
     >
       <div className="flex flex-wrap items-center justify-between gap-3">

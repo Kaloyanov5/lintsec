@@ -18,5 +18,23 @@ export const SEVERITY_BADGE: Record<Severity, string> = {
   INFO: 'bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300',
 }
 
+/** Solid accent color per severity — used for stacked-bar segments and chip dots. */
+export const SEVERITY_DOT: Record<Severity, string> = {
+  CRITICAL: 'bg-red-500',
+  HIGH: 'bg-orange-500',
+  MEDIUM: 'bg-amber-400',
+  LOW: 'bg-sky-500',
+  INFO: 'bg-slate-400',
+}
+
 /** Severities in display order (CRITICAL → INFO). */
 export const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
+
+/** Left accent rail per severity for finding cards. */
+export const SEVERITY_RAIL: Record<Severity, string> = {
+  CRITICAL: 'border-l-red-500',
+  HIGH: 'border-l-orange-500',
+  MEDIUM: 'border-l-amber-400',
+  LOW: 'border-l-sky-500',
+  INFO: 'border-l-slate-400',
+}
