@@ -81,4 +81,50 @@ final class XssContextAnalyzer {
         String name = body.substring(start, end).toLowerCase(Locale.ROOT);
         return URL_ATTRS.contains(name) ? ReflectionContext.ATTR_URL : attrCtx;
     }
+
+    /** The Probe-2 injection value for {@code ctx}, embedding the shared {@code lintsec<nonce>} marker. */
+    static String breakoutPayload(ReflectionContext ctx, String nonce) {
+        String marker = "lintsec" + nonce;
+        return switch (ctx) {
+            case HTML_TEXT, TAG_NAME, UNKNOWN -> "<" + marker + ">";
+            case ATTR_DOUBLE -> marker + "\"x";
+            case ATTR_SINGLE -> marker + "'x";
+            case ATTR_UNQUOTED -> marker + " x";
+            case SCRIPT -> "</script><" + marker + ">";
+            case STYLE -> "</style><" + marker + ">";
+            case COMMENT -> "--><" + marker + ">";
+            case ATTR_URL -> "javascript:" + marker;
+        };
+    }
+
+    /**
+     * Confirm the Probe-2 breakout: the context's distinguishing metacharacters must reflect raw
+     * (unencoded) adjacent to the marker. Returns the severity + reason, or empty when encoded/absent.
+     */
+    static java.util.Optional<Breakout> confirmBreakout(ReflectionContext ctx, String body, String nonce) {
+        if (body == null) return java.util.Optional.empty();
+        String marker = "lintsec" + nonce;
+        return switch (ctx) {
+            case HTML_TEXT, TAG_NAME, UNKNOWN -> hitIf(body.contains("<" + marker),
+                    com.lintsec.domain.Severity.HIGH, "raw '<' before the canary breaks into HTML");
+            case ATTR_DOUBLE -> hitIf(body.contains(marker + "\""),
+                    com.lintsec.domain.Severity.HIGH, "raw '\"' after the canary breaks out of the double-quoted attribute");
+            case ATTR_SINGLE -> hitIf(body.contains(marker + "'"),
+                    com.lintsec.domain.Severity.HIGH, "raw ''' after the canary breaks out of the single-quoted attribute");
+            case ATTR_UNQUOTED -> hitIf(body.contains(marker + " "),
+                    com.lintsec.domain.Severity.HIGH, "raw space after the canary allows adding an event-handler attribute");
+            case SCRIPT -> hitIf(body.contains("</script><" + marker),
+                    com.lintsec.domain.Severity.HIGH, "raw '</script>' before the canary closes the script element");
+            case STYLE -> hitIf(body.contains("</style><" + marker),
+                    com.lintsec.domain.Severity.MEDIUM, "raw '</style>' before the canary breaks out of the style element");
+            case COMMENT -> hitIf(body.contains("--><" + marker),
+                    com.lintsec.domain.Severity.HIGH, "raw '-->' before the canary escapes the HTML comment");
+            case ATTR_URL -> hitIf(body.contains("javascript:" + marker),
+                    com.lintsec.domain.Severity.HIGH, "raw 'javascript:' scheme reflected in a URL attribute executes on navigation");
+        };
+    }
+
+    private static java.util.Optional<Breakout> hitIf(boolean condition, com.lintsec.domain.Severity severity, String detail) {
+        return condition ? java.util.Optional.of(new Breakout(severity, detail)) : java.util.Optional.empty();
+    }
 }
