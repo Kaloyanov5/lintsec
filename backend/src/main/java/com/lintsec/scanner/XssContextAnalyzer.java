@@ -88,6 +88,9 @@ public final class XssContextAnalyzer {
     /** The Probe-2 injection value for {@code ctx}, embedding the shared {@code lintsec<nonce>} marker. */
     public static String breakoutPayload(ReflectionContext ctx, String nonce) {
         String marker = "lintsec" + nonce;
+        // Note: the ATTR_UNQUOTED breakout relies on a raw space surviving. When this payload is sent
+        // as a URL query value the space is encoded as '+'; servers that don't decode '+' back to a
+        // space in query strings will suppress this (a conservative false negative, never a false positive).
         return switch (ctx) {
             case HTML_TEXT, TAG_NAME, UNKNOWN -> "<" + marker + ">";
             case ATTR_DOUBLE -> marker + "\"x";

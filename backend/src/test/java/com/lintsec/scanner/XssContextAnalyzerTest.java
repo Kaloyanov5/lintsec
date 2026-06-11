@@ -158,4 +158,60 @@ class XssContextAnalyzerTest {
         String body = "<script>var x='&lt;/script&gt;<lintsecN1>'</script>";
         assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.SCRIPT, body, "N1").isEmpty());
     }
+
+    @Test
+    void confirmsSingleQuoteAttributeBreakout() {
+        String body = "<input value='lintsecN1'x'>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.ATTR_SINGLE, body, "N1").isPresent());
+    }
+
+    @Test
+    void suppressesSingleQuoteAttributeWhenQuoteEncoded() {
+        String body = "<input value='lintsecN1&#39;x'>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.ATTR_SINGLE, body, "N1").isEmpty());
+    }
+
+    @Test
+    void confirmsUnquotedAttributeBreakoutWhenSpaceSurvives() {
+        String body = "<input value=lintsecN1 x>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.ATTR_UNQUOTED, body, "N1").isPresent());
+    }
+
+    @Test
+    void suppressesUnquotedAttributeWhenNoRawSpace() {
+        // No raw space adjacent to the marker -> cannot add an event-handler attribute.
+        String body = "<input value=lintsecN1>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.ATTR_UNQUOTED, body, "N1").isEmpty());
+    }
+
+    @Test
+    void confirmsCommentBreakoutWhenCloserSurvives() {
+        String body = "<!-- x --><lintsecN1> -->";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.COMMENT, body, "N1").isPresent());
+    }
+
+    @Test
+    void suppressesCommentBreakoutWhenCloserEncoded() {
+        String body = "<!-- x --&gt;<lintsecN1> -->";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.COMMENT, body, "N1").isEmpty());
+    }
+
+    @Test
+    void confirmsTagNameBreakoutWhenAngleBracketSurvives() {
+        // TAG_NAME shares the HTML-text breakout payload "<marker>".
+        String body = "<<lintsecN1> foo>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.TAG_NAME, body, "N1").isPresent());
+    }
+
+    @Test
+    void confirmsUnknownContextViaHtmlTextBreakout() {
+        String body = "<lintsecN1>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.UNKNOWN, body, "N1").isPresent());
+    }
+
+    @Test
+    void styleBreakoutSuppressedWhenCloserEncoded() {
+        String body = "<style>.a{}&lt;/style&gt;<lintsecN1>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.STYLE, body, "N1").isEmpty());
+    }
 }
