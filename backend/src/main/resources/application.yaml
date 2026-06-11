@@ -40,6 +40,9 @@ lintsec:
   scan:
     max-duration-minutes: ${LINTSEC_SCAN_MAX_DURATION_MINUTES:5}
     max-concurrent-per-user: ${LINTSEC_SCAN_MAX_CONCURRENT_PER_USER:3}
+    # SSRF escape hatch: permit internal/loopback/private scan targets. Default false; enabled only
+    # in the dev profile for local testing. MUST stay false in production.
+    allow-private-targets: false
   ai:
     provider: gemini
     gemini-api-key: ${GEMINI_API_KEY:}

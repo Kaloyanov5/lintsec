@@ -46,6 +46,11 @@ server:
       cookie:
         secure: false
 
+lintsec:
+  scan:
+    # Local development: allow scanning loopback/private targets (e.g. http://localhost:8081 DVWA).
+    allow-private-targets: true
+
 logging:
   level:
     com.lintsec: DEBUG

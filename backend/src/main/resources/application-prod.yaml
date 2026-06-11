@@ -44,6 +44,10 @@ server:
         secure: true
         same-site: strict
 
+lintsec:
+  scan:
+    allow-private-targets: false   # never permit internal/loopback targets in production (SSRF)
+
 springdoc:
   api-docs:
     enabled: false      # don't expose the API schema / Swagger UI in production

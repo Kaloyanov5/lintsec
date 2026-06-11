@@ -1,5 +1,6 @@
 package com.lintsec.crawler;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,6 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * hermetic — no DNS lookups against the network.
  */
 class TargetGuardTest {
+
+    // allowPrivateTargets is static; reset after every test so a flag-on case can't leak into others.
+    @AfterEach
+    void resetFlag() {
+        TargetGuard.setAllowPrivateTargets(false);
+    }
 
     @Test
     void blocksLoopback() {
@@ -76,5 +83,24 @@ class TargetGuardTest {
         // Literal public IPs — no DNS needed, classified directly.
         assertTrue(TargetGuard.isAllowed("http://8.8.8.8/"));
         assertTrue(TargetGuard.isAllowed("https://1.1.1.1/some/path?q=1"));
+    }
+
+    @Test
+    void allowPrivateTargetsFlagPermitsLoopbackAndPrivate() {
+        TargetGuard.setAllowPrivateTargets(true);
+        assertTrue(TargetGuard.isAllowed("http://127.0.0.1:8081/"));
+        assertTrue(TargetGuard.isAllowed("https://localhost/"));
+        assertTrue(TargetGuard.isAllowed("http://192.168.1.1/"));
+        assertTrue(TargetGuard.isAllowed("http://[::1]/"));
+    }
+
+    @Test
+    void allowPrivateTargetsFlagStillRejectsBadSchemesAndMalformed() {
+        // The flag lifts only the internal-address gate; scheme/host validation still applies.
+        TargetGuard.setAllowPrivateTargets(true);
+        assertFalse(TargetGuard.isAllowed("file:///etc/passwd"));
+        assertFalse(TargetGuard.isAllowed("ftp://127.0.0.1/"));
+        assertFalse(TargetGuard.isAllowed("not a url"));
+        assertFalse(TargetGuard.isAllowed(null));
     }
 }

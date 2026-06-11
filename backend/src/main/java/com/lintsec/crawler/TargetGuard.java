@@ -27,7 +27,18 @@ public final class TargetGuard {
 
     private static final Logger log = LoggerFactory.getLogger(TargetGuard.class);
 
+    // Dev/test escape hatch. When true, the internal-address gate is lifted so a developer can scan
+    // a local target like http://localhost:8081. Set at startup from lintsec.scan.allow-private-targets
+    // (default false; false under the prod profile) by TargetGuardConfig. volatile: written once on the
+    // startup thread, read on scan threads.
+    private static volatile boolean allowPrivateTargets = false;
+
     private TargetGuard() {}
+
+    /** Set by {@link TargetGuardConfig} from configuration. See {@link #allowPrivateTargets}. */
+    static void setAllowPrivateTargets(boolean value) {
+        allowPrivateTargets = value;
+    }
 
     /**
      * Whether {@code url} is a permitted scan/fetch target: a syntactically valid http(s) URL whose
@@ -65,6 +76,10 @@ public final class TargetGuard {
         } catch (Exception e) {
             return false;
         }
+
+        // Dev escape hatch: permit internal/loopback/private targets for local scanning. Scheme, host,
+        // and resolvability are still enforced above; only the internal-address gate below is lifted.
+        if (allowPrivateTargets) return true;
 
         // Block if ANY resolved address is internal — defeats a record that mixes a public and a
         // private answer to slip past a "first address only" check.
