@@ -18,6 +18,10 @@ public class SseEmitterRegistry {
     private static final Logger log = LoggerFactory.getLogger(SseEmitterRegistry.class);
 
     private final Map<Long, List<SseEmitter>> emittersByScanId = new ConcurrentHashMap<>();
+    // Last event published per in-progress scan, so a client that subscribes mid-scan can be caught
+    // up to the current milestone immediately (the live stream itself has no replay). Cleared when
+    // the scan reaches a terminal event.
+    private final Map<Long, ScanEvent> lastEventByScanId = new ConcurrentHashMap<>();
 
     public SseEmitter register(Long scanId) {
         SseEmitter emitter = new SseEmitter(SCAN_SSE_TIMEOUT_MS);
@@ -55,8 +59,30 @@ public class SseEmitterRegistry {
         }
     }
 
+    /**
+     * Sends the most recent event for an in-progress scan to a just-subscribed emitter, so a client
+     * that opens the stream mid-scan immediately reflects the current milestone instead of waiting
+     * for the next one (the stream has no replay). No-op if no event has been published yet.
+     */
+    public void replayLatest(Long scanId, SseEmitter emitter) {
+        ScanEvent last = lastEventByScanId.get(scanId);
+        if (last == null) return;
+        try {
+            emitter.send(SseEmitter.event().name("scan").data(last));
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+        }
+    }
+
     @EventListener
     public void onScanEvent(ScanEvent event) {
+        // Remember the latest milestone for late subscribers; drop it once the scan is terminal.
+        if (isTerminal(event.type())) {
+            lastEventByScanId.remove(event.scanId());
+        } else {
+            lastEventByScanId.put(event.scanId(), event);
+        }
+
         List<SseEmitter> emitters = emittersByScanId.get(event.scanId());
         if (emitters == null || emitters.isEmpty()) return;
 

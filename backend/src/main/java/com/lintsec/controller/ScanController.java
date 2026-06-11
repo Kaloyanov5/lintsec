@@ -203,6 +203,10 @@ public class ScanController {
         if (terminal != null) {
             sseRegistry.emitTerminalSnapshot(id, terminal, scan.getPagesCrawled(),
                     (int) findingRepository.countByScanId(id));
+        } else {
+            // Still running: catch a late subscriber up to the current milestone so the live panel
+            // reflects real progress immediately rather than resetting until the next milestone.
+            sseRegistry.replayLatest(id, emitter);
         }
         return emitter;
     }
