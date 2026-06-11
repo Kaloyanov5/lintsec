@@ -151,4 +151,11 @@ class XssContextAnalyzerTest {
         String body = "<style>.a{}</style><p>CANARY</p>";
         assertEquals(ReflectionContext.HTML_TEXT, XssContextAnalyzer.classify(body, body.indexOf("CANARY")));
     }
+
+    @Test
+    void suppressesScriptBreakoutWhenClosingTagEncoded() {
+        // The </script> is HTML-entity-encoded, so it does not actually close the script element.
+        String body = "<script>var x='&lt;/script&gt;<lintsecN1>'</script>";
+        assertTrue(XssContextAnalyzer.confirmBreakout(ReflectionContext.SCRIPT, body, "N1").isEmpty());
+    }
 }
