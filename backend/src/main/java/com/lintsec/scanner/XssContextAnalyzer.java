@@ -9,7 +9,8 @@ import java.util.Set;
  * Pure helpers for context-aware reflected-XSS confirmation: classify where a plain canary lands in
  * a response, build the context-specific breakout payload, and confirm whether the breakout
  * metacharacters survived unencoded. Raw-string based (matches the browser's pre-parse view), no DOM
- * normalization. Package-private + unit-tested, mirroring the confirmInjection() pattern.
+ * normalization. Public shared helper (consumed by ReflectedXssModule) + unit-tested, in the spirit
+ * of the confirmInjection() pattern.
  */
 public final class XssContextAnalyzer {
     private XssContextAnalyzer() {}
