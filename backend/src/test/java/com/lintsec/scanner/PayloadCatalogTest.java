@@ -26,6 +26,11 @@ class PayloadCatalogTest {
     }
 
     @Test
+    void plainCanaryIsAlphanumericWithNonce() {
+        assertEquals("lintsecabc123", PayloadCatalog.payloadFor(PayloadId.XSS_CANARY_PLAIN, "abc123"));
+    }
+
+    @Test
     void everyPayloadIdHasADescription() {
         for (PayloadId id : PayloadId.values()) {
             assertNotNull(PayloadCatalog.descriptionFor(id), "missing description for " + id);

@@ -5,6 +5,7 @@ public final class PayloadCatalog {
 
     public static String payloadFor(PayloadId id, String nonce) {
         return switch (id) {
+            case XSS_CANARY_PLAIN -> "lintsec" + nonce;
             case XSS_CANARY_REFLECTED -> "<lintsec_canary_" + nonce + ">";
             case SQLI_SINGLE_QUOTE -> "'";
             case SQLI_BALANCED -> "''";
@@ -18,6 +19,7 @@ public final class PayloadCatalog {
 
     public static String descriptionFor(PayloadId id) {
         return switch (id) {
+            case XSS_CANARY_PLAIN -> "Plain alphanumeric canary `lintsec{nonce}` used to locate and classify the reflection context before a context-specific breakout probe is sent.";
             case XSS_CANARY_REFLECTED -> "Canary payload is `<lintsec_canary_{nonce}>`; flagged if reflected without output encoding/escaping.";
             case SQLI_SINGLE_QUOTE -> "Single-quote injected to trigger SQL syntax error in unparameterized query.";
             case SQLI_BALANCED -> "Balanced two single-quotes; the control payload that should NOT error if the single-quote finding is real.";
