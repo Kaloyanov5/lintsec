@@ -11,17 +11,17 @@ import java.util.Set;
  * metacharacters survived unencoded. Raw-string based (matches the browser's pre-parse view), no DOM
  * normalization. Package-private + unit-tested, mirroring the confirmInjection() pattern.
  */
-final class XssContextAnalyzer {
+public final class XssContextAnalyzer {
     private XssContextAnalyzer() {}
 
     /** A confirmed breakout: the severity to report and a human-readable reason for the finding note. */
-    record Breakout(Severity severity, String detail) {}
+    public record Breakout(Severity severity, String detail) {}
 
     private static final Set<String> URL_ATTRS =
             Set.of("href", "src", "action", "formaction", "poster", "xlink:href");
 
     /** Classify the context of the canary at {@code offset} in {@code body}. */
-    static ReflectionContext classify(String body, int offset) {
+    public static ReflectionContext classify(String body, int offset) {
         if (body == null || offset < 0 || offset >= body.length()) return ReflectionContext.UNKNOWN;
         String lower = body.toLowerCase(Locale.ROOT);
 
@@ -85,7 +85,7 @@ final class XssContextAnalyzer {
     }
 
     /** The Probe-2 injection value for {@code ctx}, embedding the shared {@code lintsec<nonce>} marker. */
-    static String breakoutPayload(ReflectionContext ctx, String nonce) {
+    public static String breakoutPayload(ReflectionContext ctx, String nonce) {
         String marker = "lintsec" + nonce;
         return switch (ctx) {
             case HTML_TEXT, TAG_NAME, UNKNOWN -> "<" + marker + ">";
@@ -103,7 +103,7 @@ final class XssContextAnalyzer {
      * Confirm the Probe-2 breakout: the context's distinguishing metacharacters must reflect raw
      * (unencoded) adjacent to the marker. Returns the severity + reason, or empty when encoded/absent.
      */
-    static Optional<Breakout> confirmBreakout(ReflectionContext ctx, String body, String nonce) {
+    public static Optional<Breakout> confirmBreakout(ReflectionContext ctx, String body, String nonce) {
         if (body == null) return Optional.empty();
         String marker = "lintsec" + nonce;
         return switch (ctx) {
